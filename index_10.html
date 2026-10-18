@@ -1,0 +1,2625 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DroneForge - Jumeau numérique intégral pour drones autonomes</title>
+<meta name="description" content="Atelier moteur 3D, simulation de vol 6-DoF, entraînement PPO, carte mère et nomenclature de production pour drones multirotors.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ff8a3d'/%3E%3Ctext x='16' y='21' font-family='monospace' font-weight='800' font-size='13' text-anchor='middle' fill='%231c0e04'%3EDF%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one-screen engineering studio — header telemetry, module tabs, 3D viewport left + instrument panel right */
+:root{
+  --bg:#0a0f18; --bg-2:#0d1420; --panel:#101826; --panel-2:#16202f; --line:#1f2c41; --line-2:#2b3c56;
+  --fg:#dfe7f1; --muted:#8597ae; --dim:#5a6b83;
+  --accent:#ff8a3d; --accent-ink:#1c0e04; --cyan:#5cc8ff; --good:#3ddc97; --warn:#ffc24b; --bad:#ff6b6b;
+  --phase-a:#ffb340; --phase-b:#5cc8ff; --phase-c:#c98bff;
+  --glass:rgba(9,14,22,.82);
+  --font-ui:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r:8px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 13px/1.45 var(--font-ui);overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.text-cyan{color:var(--cyan)} .text-emerald{color:var(--good)} .text-amber{color:var(--warn)} .text-accent{color:var(--accent)}
+
+#app-container{height:100%;display:grid;grid-template-rows:auto auto minmax(0,1fr)}
+
+/* ---------- En-tête ---------- */
+#top-header{display:flex;align-items:center;gap:12px 20px;padding:10px 16px;background:var(--bg-2);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand-section{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand-logo{width:34px;height:34px;display:grid;place-items:center;border-radius:7px;background:var(--accent);color:var(--accent-ink);font:800 14px/1 var(--font-mono);letter-spacing:-.04em}
+.brand-title{display:block;font-weight:800;font-size:15px;letter-spacing:-.01em}
+.brand-version{display:block;font:500 10.5px/1.2 var(--font-mono);color:var(--muted);letter-spacing:.03em}
+.header-telemetry{display:flex;flex-wrap:wrap;min-width:0}
+.head-stat{padding:2px 14px;border-left:1px solid var(--line);min-width:0}
+.head-stat-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.head-stat-val{display:block;font:600 13px/1.35 var(--font-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+.head-actions{display:flex;gap:6px}
+
+/* ---------- Onglets ---------- */
+#nav-tabs-bar{display:flex;gap:2px;padding:0 10px;background:var(--bg-2);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+#nav-tabs-bar::-webkit-scrollbar{display:none}
+.nav-tab{display:flex;align-items:center;gap:8px;padding:10px 12px;border:0;background:none;color:var(--muted);font-weight:600;font-size:12.5px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.nav-tab .num{font:600 11px var(--font-mono);color:var(--dim);border:1px solid var(--line-2);border-radius:4px;padding:0 5px;line-height:17px}
+.nav-tab:hover{color:var(--fg)}
+.nav-tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.nav-tab[aria-selected="true"] .num{color:var(--accent-ink);background:var(--accent);border-color:var(--accent)}
+.nav-tab .dot{width:6px;height:6px;border-radius:50%;background:var(--good);display:none}
+.nav-tab.busy .dot{display:block;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+
+/* ---------- Espace de travail ---------- */
+#workspace-body{display:grid;grid-template-columns:minmax(0,1fr) 384px;min-height:0}
+#viewport-3d-container{position:relative;min-height:0;min-width:0;background:radial-gradient(120% 90% at 50% 20%,#132036 0%,var(--bg) 70%);overflow:hidden}
+#viewport-3d-container canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
+#side-panel{border-left:1px solid var(--line);background:var(--panel);overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+
+.vp-top{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;align-items:flex-start;pointer-events:none;flex-wrap:wrap}
+.pill{background:var(--glass);border:1px solid var(--line-2);border-radius:999px;padding:5px 11px;font-size:11.5px;color:var(--muted);backdrop-filter:blur(6px)}
+.pill b{color:var(--fg);font-weight:600}
+.vp-legend{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:6px 12px;max-width:calc(100% - 20px);background:var(--glass);border:1px solid var(--line-2);border-radius:var(--r);padding:7px 10px;font-size:11px;color:var(--muted);pointer-events:none}
+.vp-legend:empty{display:none}
+.vp-legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.vp-legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.vp-banner{position:absolute;top:48px;left:50%;transform:translateX(-50%);background:var(--glass);border:1px solid var(--bad);color:var(--fg);border-radius:var(--r);padding:8px 12px;font-weight:600;display:flex;gap:10px;align-items:center;max-width:calc(100% - 24px)}
+.vp-banner.warn{border-color:var(--warn)}
+.vp-tip{position:absolute;pointer-events:none;background:var(--glass);border:1px solid var(--line-2);border-radius:6px;padding:6px 9px;font-size:11.5px;max-width:240px;transform:translate(12px,12px)}
+.vp-tip b{display:block;color:var(--fg)}
+.vp-tip span{color:var(--muted)}
+.vp-fallback{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted)}
+.vp-fallback strong{display:block;color:var(--fg);font-size:15px;margin-bottom:6px}
+.vp-hud{position:absolute;right:10px;top:10px;display:grid;gap:4px;background:var(--glass);border:1px solid var(--line-2);border-radius:var(--r);padding:8px 10px;font:500 11.5px/1.35 var(--font-mono);pointer-events:none;min-width:150px}
+.vp-hud div{display:flex;justify-content:space-between;gap:12px}
+.vp-hud span:first-child{color:var(--muted);font-family:var(--font-ui)}
+
+/* ---------- Panneaux ---------- */
+.tab-panel{display:block}
+.panel-head{padding:14px 16px 12px;border-bottom:1px solid var(--line);display:grid;gap:4px}
+.panel-head h2{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.panel-head p{margin:0;color:var(--muted);font-size:12px;max-width:60ch}
+.sec{padding:12px 16px 14px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+.sec>h3{margin:0;font:600 10.5px/1.2 var(--font-ui);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sec>h3 .aside{font:500 11px var(--font-mono);letter-spacing:0;text-transform:none;color:var(--dim)}
+.note{margin:0;color:var(--muted);font-size:11.5px;line-height:1.5}
+.ctl{display:grid;gap:3px}
+.ctl-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctl-head label{font-size:12.5px}
+.val{font:500 12px var(--font-mono);color:var(--cyan);font-variant-numeric:tabular-nums;white-space:nowrap}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;background:transparent;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--line-2);border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--fg);margin-top:-5px;border:2px solid var(--panel)}
+input[type=range]::-moz-range-track{height:4px;background:var(--line-2);border-radius:2px}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:var(--fg);border:2px solid var(--panel)}
+input[type=range]:focus-visible{outline:none}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--cyan)}
+input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--cyan)}
+select,input[type=number],textarea{background:var(--bg-2);border:1px solid var(--line-2);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+textarea{font:400 11.5px/1.45 var(--font-mono);resize:vertical;min-height:160px}
+.field{display:grid;gap:4px}
+.field>label{font-size:12px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 12px;border-radius:6px;border:1px solid var(--line-2);background:var(--panel-2);color:var(--fg);font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn.small{padding:4px 9px;font-size:11.5px}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+.btn-row .btn{flex:1 1 auto}
+.seg{display:flex;border:1px solid var(--line-2);border-radius:7px;overflow:hidden}
+.seg button{flex:1;padding:7px 6px;border:0;background:none;color:var(--muted);font-weight:600;font-size:12px;cursor:pointer;border-left:1px solid var(--line)}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--panel-2);color:var(--fg);box-shadow:inset 0 -2px 0 var(--accent)}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font-size:12.5px}
+.switch input{appearance:none;-webkit-appearance:none;width:30px;height:17px;border-radius:9px;background:var(--line-2);position:relative;cursor:pointer;flex:none;margin:0;transition:background .15s}
+.switch input::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--fg);transition:transform .15s}
+.switch input:checked{background:var(--accent)}
+.switch input:checked::after{transform:translateX(13px);background:var(--accent-ink)}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.kpis.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.kpi{background:var(--panel);padding:8px 10px;min-width:0}
+.kpi-l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-v{font:600 16px/1.3 var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-v small{font-size:11px;color:var(--muted);font-weight:500;margin-left:3px}
+.kpi.warn .kpi-v{color:var(--warn)} .kpi.bad .kpi-v{color:var(--bad)} .kpi.good .kpi-v{color:var(--good)}
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.checks li{display:grid;grid-template-columns:8px 1fr;gap:9px;font-size:12px;line-height:1.45}
+.checks li::before{content:"";width:8px;height:8px;border-radius:50%;margin-top:5px;background:var(--good)}
+.checks li.warn::before{background:var(--warn)} .checks li.bad::before{background:var(--bad)} .checks li.info::before{background:var(--cyan)}
+canvas.chart{width:100%;height:160px;display:block;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r)}
+canvas.chart.tall{height:200px}
+.legend-row{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+.legend-row span{display:inline-flex;align-items:center;gap:6px}
+.legend-row i{width:12px;height:3px;border-radius:2px;display:inline-block}
+.bars{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.bar{display:grid;gap:4px;text-align:center;font:500 11px var(--font-mono)}
+.bar-track{height:64px;background:var(--bg-2);border:1px solid var(--line);border-radius:5px;position:relative;overflow:hidden}
+.bar-fill{position:absolute;left:0;right:0;bottom:0;background:var(--cyan);transition:height .08s linear}
+.bar-fill.hot{background:var(--warn)}
+.bar-label{color:var(--muted);font-family:var(--font-ui)}
+.meter{display:grid;gap:4px}
+.meter-head{display:flex;justify-content:space-between;font-size:12px;gap:8px}
+.meter-head span:last-child{font-family:var(--font-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.meter-track{height:6px;background:var(--bg-2);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.meter-fill{height:100%;background:var(--good)}
+.meter-fill.warn{background:var(--warn)} .meter-fill.bad{background:var(--bad)}
+.stack{display:flex;height:12px;border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.stack div{height:100%}
+.wp-list{display:grid;gap:4px}
+.wp-item{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg-2);cursor:pointer;font:500 11.5px var(--font-mono);text-align:left;color:var(--fg)}
+.wp-item .n{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--line-2);font-size:10.5px}
+.wp-item[aria-pressed="true"]{border-color:var(--accent)}
+.wp-item[aria-pressed="true"] .n{background:var(--accent);color:var(--accent-ink)}
+.wp-item.active .n{box-shadow:0 0 0 2px var(--cyan)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{padding:4px 9px;border-radius:999px;border:1px solid var(--line-2);background:var(--bg-2);font-size:11.5px;cursor:pointer;color:var(--fg)}
+.chip[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.info-card{border:1px solid var(--line-2);border-radius:var(--r);padding:10px 12px;background:var(--bg-2);display:grid;gap:6px}
+.info-card h4{margin:0;font-size:13.5px}
+.info-card dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12px}
+.info-card dt{color:var(--muted)}
+.info-card dd{margin:0;font-family:var(--font-mono);font-size:11.5px}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table.bom{width:100%;border-collapse:collapse;font-size:11.5px}
+table.bom th{position:sticky;top:0;background:var(--panel-2);text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;padding:7px 8px;white-space:nowrap}
+table.bom td{padding:6px 8px;border-top:1px solid var(--line);vertical-align:top}
+table.bom td.num,table.bom th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.bom td .sub{display:block;color:var(--muted);font-size:10.5px}
+table.bom tfoot td{font-weight:700;background:var(--panel-2)}
+.ref{font-family:var(--font-mono);color:var(--dim);font-size:10.5px;white-space:nowrap}
+.checklist{display:grid;gap:2px}
+.checklist label{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:start;padding:5px 4px;border-radius:5px;cursor:pointer;font-size:12px}
+.checklist label:hover{background:var(--panel-2)}
+.checklist input{margin:2px 0 0;accent-color:var(--accent);width:14px;height:14px}
+.checklist input:checked+span{color:var(--muted);text-decoration:line-through}
+.progress{height:6px;border-radius:4px;background:var(--bg-2);border:1px solid var(--line);overflow:hidden}
+.progress div{height:100%;background:var(--accent)}
+.pad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,36px);gap:4px;justify-content:center}
+.pad button{border:1px solid var(--line-2);background:var(--bg-2);border-radius:6px;color:var(--fg);font:600 12px var(--font-mono);cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none}
+.pad button.on{background:var(--accent);color:var(--accent-ink)}
+.pad-wrap{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+kbd{font:500 10.5px var(--font-mono);border:1px solid var(--line-2);border-bottom-width:2px;border-radius:4px;padding:0 4px;color:var(--fg);background:var(--bg-2)}
+
+/* ---------- Modale & notifications ---------- */
+.modal-back{position:fixed;inset:0;background:rgba(3,6,12,.7);display:grid;place-items:center;z-index:50;padding:16px}
+.modal{background:var(--panel);border:1px solid var(--line-2);border-radius:12px;width:min(560px,100%);max-height:90%;overflow:auto;padding:18px;display:grid;gap:12px}
+.modal h2{margin:0;font-size:16px}
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;padding:9px 14px;font-size:12.5px;z-index:60;box-shadow:0 8px 30px rgba(0,0,0,.4);max-width:calc(100% - 32px)}
+
+@media (max-width:1100px){ .head-stat:nth-child(n+5){display:none} }
+@media (max-width:900px){
+  body{overflow:auto}
+  #app-container{height:auto;min-height:100%;grid-template-rows:auto auto auto}
+  #workspace-body{grid-template-columns:minmax(0,1fr)}
+  #viewport-3d-container{height:56vh;min-height:300px}
+  #side-panel{border-left:0;border-top:1px solid var(--line);overflow:visible}
+  .head-stat{padding:2px 10px}
+  .vp-hud{display:none}
+}
+@media (max-width:520px){
+  .header-telemetry{width:100%;order:3}
+  .head-stat:first-child{border-left:0;padding-left:0}
+  .head-stat:nth-child(n+4){display:none}
+  .nav-tab .lbl-long{display:none}
+}
+@media (min-width:521px){ .nav-tab .lbl-short{display:none} }
+@media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
+
+</style>
+</head>
+<body>
+<div id="app-container">
+  <header id="top-header">
+    <div class="brand-section">
+      <div class="brand-logo" aria-hidden="true">DF</div>
+      <div>
+        <span class="brand-title">DroneForge</span>
+        <span class="brand-version">v2.0 · jumeau numérique</span>
+      </div>
+    </div>
+    <div class="header-telemetry" aria-live="polite">
+      <div class="head-stat"><span class="head-stat-label">Configuration</span><span class="head-stat-val text-cyan" id="header-preset-name">—</span></div>
+      <div class="head-stat"><span class="head-stat-label">Moteurs</span><span class="head-stat-val" id="header-kv">—</span></div>
+      <div class="head-stat"><span class="head-stat-label">Poussée totale (4×)</span><span class="head-stat-val text-emerald" id="header-thrust">—</span></div>
+      <div class="head-stat"><span class="head-stat-label">Poussée / poids</span><span class="head-stat-val" id="header-twr">—</span></div>
+      <div class="head-stat"><span class="head-stat-label">Alimentation</span><span class="head-stat-val text-amber" id="header-voltage">—</span></div>
+    </div>
+    <div class="head-actions">
+      <button class="btn small" id="btn-export" type="button">Exporter</button>
+      <button class="btn small" id="btn-import" type="button">Importer</button>
+    </div>
+  </header>
+
+  <nav id="nav-tabs-bar" role="tablist" aria-label="Modules">
+    <button class="nav-tab" role="tab" data-tab="motor" id="tabbtn-motor" aria-controls="tab-motor"><span class="num">1</span><span class="lbl-long">Atelier moteur 3D</span><span class="lbl-short">Moteur</span></button>
+    <button class="nav-tab" role="tab" data-tab="simulation" id="tabbtn-simulation" aria-controls="tab-simulation"><span class="num">2</span><span class="lbl-long">Simulation de vol 6-DoF</span><span class="lbl-short">Vol</span></button>
+    <button class="nav-tab" role="tab" data-tab="ai" id="tabbtn-ai" aria-controls="tab-ai"><span class="num">3</span><span class="lbl-long">IA &amp; entraînement PPO</span><span class="lbl-short">IA</span><span class="dot" aria-hidden="true"></span></button>
+    <button class="nav-tab" role="tab" data-tab="motherboard" id="tabbtn-motherboard" aria-controls="tab-motherboard"><span class="num">4</span><span class="lbl-long">Carte mère &amp; électronique</span><span class="lbl-short">Carte</span></button>
+    <button class="nav-tab" role="tab" data-tab="production" id="tabbtn-production" aria-controls="tab-production"><span class="num">5</span><span class="lbl-long">Production &amp; nomenclature</span><span class="lbl-short">BOM</span></button>
+  </nav>
+
+  <main id="workspace-body">
+    <div id="viewport-3d-container">
+      <div class="vp-top"><div class="pill" id="vp-hint"></div></div>
+      <div class="vp-hud" id="vp-hud" hidden></div>
+      <div class="vp-banner" id="vp-banner" hidden></div>
+      <div class="vp-legend" id="vp-legend"></div>
+      <div class="vp-tip" id="vp-tip" hidden></div>
+    </div>
+    <aside id="side-panel">
+      <div class="tab-panel" id="tab-motor" role="tabpanel" aria-labelledby="tabbtn-motor"></div>
+      <div class="tab-panel" id="tab-simulation" role="tabpanel" aria-labelledby="tabbtn-simulation" hidden></div>
+      <div class="tab-panel" id="tab-ai" role="tabpanel" aria-labelledby="tabbtn-ai" hidden></div>
+      <div class="tab-panel" id="tab-motherboard" role="tabpanel" aria-labelledby="tabbtn-motherboard" hidden></div>
+      <div class="tab-panel" id="tab-production" role="tabpanel" aria-labelledby="tabbtn-production" hidden></div>
+    </aside>
+  </main>
+</div>
+<div id="modal-root"></div>
+<div id="toast" role="status" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+/* =====================================================================
+   DroneForge — noyau de calcul (aucune dépendance DOM ni Three.js)
+   Modèle moteur/hélice, bilan de masse, nomenclature, simulation 6-DoF,
+   pilote automatique et apprentissage PPO.
+   ===================================================================== */
+const DF = (() => {
+  'use strict';
+  const G = 9.81, RHO = 1.225, TAU = Math.PI * 2, DEG = Math.PI / 180;
+  const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
+  const fr = (x, d) => Number(x).toFixed(d).replace('.', ',');
+
+  /* ---------- Catalogues ---------- */
+  const PRESETS = {
+    racing:    { label: 'Course 2306 (FPV Racing)', statorD: 23, statorH: 6,   kv: 2550, winding: '12N14P', cells: 4, capacity: 1300,  propD: 5.1, propP: 4.3, blades: 3, wheelbase: 220, frameMass: 115, esc: 55 },
+    freestyle: { label: 'Freestyle 2207 (6S)',      statorD: 22, statorH: 7,   kv: 1950, winding: '12N14P', cells: 6, capacity: 1100,  propD: 5.1, propP: 3.6, blades: 3, wheelbase: 225, frameMass: 125, esc: 55 },
+    longrange: { label: 'Longue portée 7" 2806.5',  statorD: 28, statorH: 6.5, kv: 1300, winding: '12N14P', cells: 6, capacity: 1800,  propD: 7,   propP: 4,   blades: 2, wheelbase: 315, frameMass: 165, esc: 45, gps: true, firmware: 'INAV' },
+    micro:     { label: 'Micro 3" 1404',            statorD: 14, statorH: 4,   kv: 3800, winding: '9N12P',  cells: 4, capacity: 650,   propD: 3,   propP: 3,   blades: 3, wheelbase: 140, frameMass: 38,  esc: 25 },
+    heavy:     { label: 'Cartographie 15" 4114',    statorD: 41, statorH: 14,  kv: 400,  winding: '24N22P', cells: 6, capacity: 10000, propD: 15,  propP: 5.5, blades: 2, wheelbase: 650, frameMass: 620, esc: 65, gps: true, firmware: 'ArduPilot', mcu: 'H743', video: 'hd' },
+  };
+  const WINDINGS = {
+    '9N12P':  { slots: 9,  poles: 12, pattern: 'ABCABCABC' },
+    '12N14P': { slots: 12, poles: 14, pattern: 'AabBCcaABbcC' },
+    '24N22P': { slots: 24, poles: 22, pattern: 'AabBCcaABbcCaABbcCAabBCc' },
+  };
+  const ESC = {
+    25: { maxS: 4, price: 30,  mass: 6 },
+    35: { maxS: 6, price: 42,  mass: 9 },
+    45: { maxS: 6, price: 55,  mass: 12 },
+    55: { maxS: 6, price: 68,  mass: 15 },
+    65: { maxS: 8, price: 85,  mass: 20 },
+    80: { maxS: 8, price: 110, mass: 28 },
+  };
+  const MCU = {
+    F405: { label: 'STM32F405', loopKHz: 8, uarts: 6, price: 35, mA: 120, size: 10, flashKB: 1024 },
+    F722: { label: 'STM32F722', loopKHz: 8, uarts: 5, price: 45, mA: 140, size: 10, flashKB: 512 },
+    H743: { label: 'STM32H743', loopKHz: 8, uarts: 8, price: 68, mA: 220, size: 14, flashKB: 2048 },
+  };
+  const IMU = {
+    'ICM-42688-P': { gyroKHz: 8,   price: 0,  noise: 'faible' },
+    'BMI270':      { gyroKHz: 3.2, price: -3, noise: 'moyen' },
+    'MPU6000':     { gyroKHz: 8,   price: 4,  noise: 'moyen (composant en fin de vie)' },
+  };
+  const VIDEO = {
+    none:   { label: 'Aucune', mass: 0, uart: 0, loads: [] },
+    analog: { label: 'Analogique (caméra + VTX 400 mW)', mass: 14, uart: 1, loads: [{ rail: '5V', mA: 150, label: 'Caméra analogique' }, { rail: '10V', mA: 330, label: 'Émetteur vidéo 400 mW' }] },
+    hd:     { label: 'Numérique HD', mass: 36, uart: 1, loads: [{ rail: 'VBAT', W: 9, label: 'Système vidéo HD' }] },
+  };
+  const FIRMWARES = ['Betaflight', 'INAV', 'ArduPilot'];
+  const RAIL_LIMIT = { '5V': 2000, '10V': 2000 };
+
+  const LIMITS = {
+    statorD: [10, 50], statorH: [3, 20], kv: [150, 6000], cells: [2, 8], capacity: [300, 16000],
+    propD: [2, 18], propP: [1, 10], blades: [2, 5], wheelbase: [80, 1000], frameMass: [15, 2000],
+  };
+
+  function defaultConfig() {
+    const c = { preset: 'racing', mcu: 'F722', imu: 'ICM-42688-P', video: 'analog', gps: false, firmware: 'Betaflight' };
+    applyPreset(c, 'racing');
+    return c;
+  }
+  function applyPreset(c, key) {
+    const p = PRESETS[key];
+    if (!p) return c;
+    for (const k of Object.keys(LIMITS)) c[k] = p[k];
+    c.winding = p.winding; c.esc = p.esc;
+    c.gps = !!p.gps; c.firmware = p.firmware || 'Betaflight';
+    c.mcu = p.mcu || 'F722'; c.video = p.video || 'analog';
+    c.preset = key;
+    return c;
+  }
+  function sanitizeConfig(c) {
+    const d = defaultConfig();
+    const out = Object.assign({}, d, c || {});
+    for (const [k, [a, b]] of Object.entries(LIMITS)) {
+      const v = Number(out[k]);
+      out[k] = Number.isFinite(v) ? clamp(v, a, b) : d[k];
+    }
+    out.cells = Math.round(out.cells); out.blades = Math.round(out.blades);
+    if (!WINDINGS[out.winding]) out.winding = d.winding;
+    if (!ESC[out.esc]) out.esc = d.esc;
+    if (!MCU[out.mcu]) out.mcu = d.mcu;
+    if (!IMU[out.imu]) out.imu = d.imu;
+    if (!VIDEO[out.video]) out.video = d.video;
+    if (!FIRMWARES.includes(out.firmware)) out.firmware = d.firmware;
+    out.gps = !!out.gps;
+    if (out.preset !== 'custom' && !PRESETS[out.preset]) out.preset = 'custom';
+    return out;
+  }
+  function designation(c) {
+    const h = c.statorH;
+    const hs = Number.isInteger(h) ? String(h) : h.toFixed(1);
+    return String(Math.round(c.statorD)).padStart(2, '0') + (h < 10 ? '0' : '') + hs;
+  }
+
+  /* ---------- Modèle moteur brushless + hélice ----------
+     Équilibre : Kt·(Im − I0) = Q_hélice(ω),  Im = (V·d − Ke·ω)/R
+     Hélice : T = Ct·ρ·n²·D⁴ ,  P = Cp·ρ·n³·D⁵                         */
+  function motorParams(c) {
+    const vol = c.statorD * c.statorD * c.statorH; // mm³ (indice de taille)
+    const Rm = clamp(7.6e11 / (c.kv * c.kv * Math.pow(c.statorD, 4) * c.statorH), 0.008, 3);
+    const Vnom = c.cells * 3.7;
+    const I0 = 0.3 + c.kv * Vnom * 2e-5;
+    const D = c.propD * 0.0254, pd = c.propP / c.propD;
+    const bt = [0, 0.6, 1, 1.25, 1.42, 1.55][c.blades] || 1;
+    const bp = [0, 0.55, 1, 1.32, 1.6, 1.85][c.blades] || 1;
+    const Ct = (0.07 + 0.06 * pd) * bt;
+    const Cp = (0.022 + 0.075 * pd * pd) * bp;
+    const kvRad = c.kv * TAU / 60; // rad/s par volt
+    const Ke = 1 / kvRad;
+    const mass = vol < 3174 ? 32 * Math.pow(vol / 3174, 0.9) : 32 * Math.pow(vol / 3174, 0.68);
+    return { vol, Rm, Rtot: Rm + 0.012, Vnom, I0, D, Ct, Cp, kvRad, Ke, mass, statorD: c.statorD, statorH: c.statorH };
+  }
+  function operatingPoint(mp, throttle, vbat) {
+    vbat = vbat || mp.Vnom;
+    throttle = clamp(throttle, 0, 1);
+    const Vm = vbat * throttle;
+    const zero = { throttle, rpm: 0, thrustN: 0, thrustG: 0, Im: 0, Ibat: 0, Pel: 0, Pmech: 0, eff: 0, gw: 0, tip: 0, cu: 0, iron: 0, temp: 25 };
+    if (Vm < 0.05) return zero;
+    const D5 = Math.pow(mp.D, 5);
+    const Qp = w => { const n = w / TAU; return mp.Cp * RHO * n * n * D5 / TAU; };
+    let lo = 0, hi = Vm * mp.kvRad;
+    for (let i = 0; i < 60; i++) {
+      const w = 0.5 * (lo + hi);
+      const Im = (Vm - mp.Ke * w) / mp.Rtot;
+      if (mp.Ke * (Im - mp.I0) > Qp(w)) lo = w; else hi = w;
+    }
+    const w = lo, n = w / TAU;
+    const Im = Math.max(0, (Vm - mp.Ke * w) / mp.Rtot);
+    const Ibat = Im * throttle;
+    const thrustN = mp.Ct * RHO * n * n * Math.pow(mp.D, 4);
+    const Pmech = Qp(w) * w;
+    const Pel = vbat * Ibat;
+    const cu = Im * Im * mp.Rm;
+    const iron = mp.I0 * mp.Ke * w;
+    const Rth = 75 / (mp.statorD * mp.statorH);
+    return {
+      throttle, rpm: w * 60 / TAU, thrustN, thrustG: thrustN / G * 1000, Im, Ibat, Pel, Pmech,
+      eff: Pel > 0 ? Pmech / Pel : 0, gw: Pel > 0 ? (thrustN / G * 1000) / Pel : 0,
+      tip: (w * mp.D / 2) / 343, cu, iron, temp: 25 + (cu + iron) * Rth,
+    };
+  }
+
+  /* ---------- Électronique : charges par rail ---------- */
+  function electronicsLoad(c) {
+    const mcu = MCU[c.mcu];
+    const loads = [
+      { rail: '5V', mA: mcu.mA + 60, label: `Contrôleur de vol (${mcu.label}, IMU, baromètre, flash)` },
+      { rail: '5V', mA: 110, label: 'Récepteur ExpressLRS' },
+    ];
+    if (c.gps) loads.push({ rail: '5V', mA: 55, label: 'Module GNSS + compas' });
+    for (const l of VIDEO[c.video].loads) loads.push(Object.assign({}, l));
+    const rails = { '5V': { mA: 0, limit: RAIL_LIMIT['5V'] }, '10V': { mA: 0, limit: RAIL_LIMIT['10V'] }, VBAT: { W: 0 } };
+    for (const l of loads) { if (l.rail === 'VBAT') rails.VBAT.W += l.W; else rails[l.rail].mA += l.mA; }
+    const watts = 5 * rails['5V'].mA / 1000 + 10 * rails['10V'].mA / 1000 + rails.VBAT.W;
+    const ampsBat = (watts / 0.85) / (c.cells * 3.7);
+    return { loads, rails, watts, ampsBat };
+  }
+
+  function wiring(totalA, motorA) {
+    const conn = totalA < 35 ? 'XT30' : totalA < 75 ? 'XT60' : 'XT90';
+    const awgB = totalA < 40 ? 16 : totalA < 80 ? 14 : totalA < 130 ? 12 : 10;
+    const awgM = motorA < 15 ? 24 : motorA < 25 ? 22 : motorA < 40 ? 20 : motorA < 55 ? 18 : 16;
+    return { conn, awgB, awgM };
+  }
+
+  /* ---------- Nomenclature (source unique des masses) ---------- */
+  function buildBOM(c, mp, full) {
+    const L = [];
+    const add = (ref, cat, name, spec, qty, onboard, mass, price) => L.push({ ref, cat, name, spec, qty, onboard, mass, price });
+    const esc = ESC[c.esc], mcu = MCU[c.mcu], imu = IMU[c.imu];
+    const totalA = full.Ibat * 4 + 1;
+    const w = wiring(totalA, full.Im);
+    const shaft = c.statorD < 18 ? '1,5 mm' : c.statorD < 35 ? '5 mm' : '6 mm';
+    const propMass = 0.055 * c.propD * c.propD * c.blades;
+    const battMass = c.cells * (c.capacity * 0.024 + 8);
+    const cRate = clamp(Math.ceil((totalA / (c.capacity / 1000)) * 1.2 / 5) * 5, 10, 150);
+    const k = c.wheelbase / 220;
+    add('FRM-01', 'Structure', `Châssis carbone X ${c.wheelbase} mm`, `Bras ${Math.max(3, Math.round(5 * Math.sqrt(k)))} mm, carbone 3K`, 1, 1, c.frameMass, 25 + 0.12 * c.wheelbase);
+    add('MOT-01', 'Propulsion', `Moteur brushless ${designation(c)} ${c.kv} Kv`, `${c.winding}, arbre ${shaft}`, 4, 4, mp.mass, 6 + 0.27 * Math.sqrt(mp.vol));
+    add('PRP-01', 'Propulsion', `Hélice ${c.propD}×${c.propP}×${c.blades}`, '2 CW + 2 CCW, 1 jeu de rechange', 8, 4, propMass, 0.2 + 0.03 * c.propD * c.propD * c.blades / 3);
+    add('ESC-01', 'Électronique', `ESC 4-en-1 ${c.esc} A`, `${esc.maxS}S max, DShot bidirectionnel`, 1, 1, esc.mass, esc.price);
+    add('FC-01', 'Électronique', `Contrôleur de vol ${mcu.label}`, `${c.imu}, baromètre, blackbox 16 Mo`, 1, 1, 8, mcu.price + imu.price);
+    add('RX-01', 'Radio', 'Récepteur ExpressLRS 2,4 GHz', 'Antenne en T, télémétrie', 1, 1, 3, 15);
+    if (c.video === 'analog') {
+      add('CAM-01', 'Vidéo', 'Caméra analogique 1200 TVL', 'Capteur 1/3", 2,1 mm', 1, 1, 6, 25);
+      add('VTX-01', 'Vidéo', 'Émetteur vidéo 5,8 GHz 400 mW', 'Contrôle SmartAudio', 1, 1, 8, 25);
+    } else if (c.video === 'hd') {
+      add('VID-01', 'Vidéo', 'Système vidéo numérique HD', 'Caméra + émetteur, enregistrement 4K', 1, 1, 36, 190);
+    }
+    if (c.gps) add('GPS-01', 'Navigation', 'Module GNSS M10 + compas', 'UART + I²C', 1, 1, 10, 22);
+    add('BAT-01', 'Énergie', `Batterie LiPo ${c.cells}S ${c.capacity} mAh`, `${(c.cells * 3.7).toFixed(1)} V nominal, ${cRate}C`, 1, 1, battMass, 6 + 0.0048 * c.capacity * c.cells);
+    add('CON-01', 'Énergie', `Connecteur ${w.conn}`, 'Paire mâle + femelle', 1, 1, w.conn === 'XT90' ? 9 : w.conn === 'XT60' ? 4 : 2, w.conn === 'XT90' ? 3.5 : 2);
+    add('CBL-01', 'Énergie', `Câble silicone ${w.awgB} AWG`, '0,2 m rouge + noir', 1, 1, 0.012 * Math.pow(2, (16 - w.awgB) / 3) * 200 / 10, 3);
+    add('CBL-02', 'Propulsion', `Câble moteur ${w.awgM} AWG`, '12 conducteurs, 0,1 m', 1, 1, 2 + 0.008 * c.wheelbase, 2);
+    add('CAP-01', 'Énergie', `Condensateur low-ESR 1000 µF ${c.cells >= 5 ? 50 : 35} V`, 'Monté sur les pads batterie', 1, 1, 4, 1.5);
+    add('HW-01', 'Structure', 'Kit visserie M3 / M2 inox', 'Vis, écrous nylstop, entretoises', 1, 1, 10 * Math.sqrt(k), 4);
+    add('HW-02', 'Structure', 'Sangle batterie kevlar + pad', 'Une sangle de rechange', 2, 1, 4, 3.5);
+    add('HW-03', 'Structure', 'Gaine thermo, colliers, silent-blocs', 'Lot', 1, 1, 3, 3);
+    return { lines: L, wiring: w, cRate, battMass, propMass };
+  }
+
+  /* ---------- Synthèse complète d'une configuration ---------- */
+  function summarize(cIn) {
+    const c = sanitizeConfig(cIn);
+    const mp = motorParams(c);
+    const full = operatingPoint(mp, 1);
+    const bom = buildBOM(c, mp, full);
+    const auwG = bom.lines.reduce((s, l) => s + l.mass * l.onboard, 0);
+    const thrustMaxG = full.thrustG * 4;
+    const twr = thrustMaxG / auwG;
+    let hover = null;
+    if (twr > 1.0001) {
+      let lo = 0, hi = 1;
+      for (let i = 0; i < 40; i++) { const m = 0.5 * (lo + hi); if (operatingPoint(mp, m).thrustG * 4 < auwG) lo = m; else hi = m; }
+      hover = operatingPoint(mp, hi);
+    }
+    const elec = electronicsLoad(c);
+    const hoverBatA = hover ? hover.Ibat * 4 + elec.ampsBat : null;
+    const flightMin = hover ? (c.capacity / 1000 * 0.8) / hoverBatA * 60 : 0;
+    const tau = 0.012 + 0.0004 * c.propD * c.propD * Math.sqrt(c.blades / 3);
+    const kq = mp.Cp * mp.D / (TAU * mp.Ct);
+    const armL = c.wheelbase / 2000;
+    const m = auwG / 1000, mm = mp.mass / 1000;
+    const mb = Math.max(0.01, m - 4 * mm);
+    const sb = c.wheelbase / 1000 * 0.35;
+    const Ib = mb * sb * sb / 6;
+    const inertia = [2 * mm * armL * armL + Ib, 4 * mm * armL * armL + Ib * 1.2, 2 * mm * armL * armL + Ib];
+    const table = [];
+    for (let i = 0; i <= 40; i++) { const op = operatingPoint(mp, i / 40); table.push([op.thrustN, op.Ibat]); }
+    return {
+      cfg: c, mp, full, hover, bom, auwG, thrustMaxG, twr, elec, hoverBatA, flightMin,
+      tau, kq, armL, inertia, table, CdA: 0.012 * Math.pow(c.wheelbase / 220, 2),
+      Rint: c.cells * 0.008 * 1300 / c.capacity, capacityAh: c.capacity / 1000, cells: c.cells,
+      elecA: elec.ampsBat, designation: designation(c),
+      noiseHz: hover ? hover.rpm / 60 : 0, bpfHz: hover ? hover.rpm / 60 * c.blades : 0,
+    };
+  }
+
+  /* ---------- Vérifications (moteur + électronique) ---------- */
+  function motorChecks(s) {
+    const c = s.cfg, out = [];
+    const esc = ESC[c.esc];
+    if (s.twr < 1) out.push(['bad', `Poussée insuffisante : ${fr(s.twr, 2)}:1. Le drone ne décolle pas.`]);
+    else if (s.twr < 2) out.push(['warn', `Rapport poussée/poids faible (${fr(s.twr, 1)}:1). Visez au moins 2:1, 5:1 et plus pour la course.`]);
+    else out.push(['good', `Rapport poussée/poids ${fr(s.twr, 1)}:1.`]);
+    if (s.hover && s.hover.throttle > 0.7) out.push(['warn', `Gaz au stationnaire élevés (${Math.round(s.hover.throttle * 100)} %) : peu de marge de manœuvre.`]);
+    if (s.full.Im > c.esc) out.push(['bad', `Courant moteur à plein gaz ${fr(s.full.Im, 1)} A > ESC ${c.esc} A.`]);
+    else if (s.full.Im > c.esc * 0.85) out.push(['warn', `Courant moteur ${fr(s.full.Im, 1)} A proche de la limite ESC (${c.esc} A).`]);
+    else out.push(['good', `Courant moteur ${fr(s.full.Im, 1)} A, ESC ${c.esc} A suffisant.`]);
+    if (c.cells > esc.maxS) out.push(['bad', `Batterie ${c.cells}S au-dessus de la tension maximale de l'ESC (${esc.maxS}S).`]);
+    if (s.full.tip > 0.75) out.push(['bad', `Bout de pale à Mach ${fr(s.full.tip, 2)} : pertes et bruit importants. Réduisez le Kv ou le diamètre.`]);
+    else if (s.full.tip > 0.62) out.push(['warn', `Bout de pale à Mach ${fr(s.full.tip, 2)} : rendement dégradé.`]);
+    if (s.full.temp > 110) out.push(['bad', `Échauffement à plein gaz continu ≈ ${Math.round(s.full.temp)} °C : bobinage en danger.`]);
+    else if (s.full.temp > 90) out.push(['warn', `Échauffement à plein gaz continu ≈ ${Math.round(s.full.temp)} °C. Acceptable en rafales courtes seulement.`]);
+    const noLoad = c.kv * c.cells * 4.2;
+    if (noLoad > 50000) out.push(['warn', `Régime à vide ${Math.round(noLoad).toLocaleString('fr-FR')} tr/min : roulements très sollicités.`]);
+    if (s.hover && s.flightMin < 3) out.push(['warn', `Autonomie au stationnaire courte (${fr(s.flightMin, 1)} min).`]);
+    return out;
+  }
+  function boardChecks(s) {
+    const c = s.cfg, out = [];
+    const mcu = MCU[c.mcu], imu = IMU[c.imu], esc = ESC[c.esc];
+    const ratio = s.full.Im / c.esc;
+    out.push([ratio > 1 ? 'bad' : ratio > 0.85 ? 'warn' : 'good', `ESC ${c.esc} A pour ${fr(s.full.Im, 1)} A par moteur à plein gaz (${Math.round(ratio * 100)} %).`]);
+    out.push([c.cells > esc.maxS ? 'bad' : 'good', `Tension : batterie ${c.cells}S, ESC limité à ${esc.maxS}S.`]);
+    const loop = Math.min(mcu.loopKHz, imu.gyroKHz);
+    out.push([loop < 4 ? 'warn' : 'good', `Boucle gyro/PID à ${loop.toLocaleString('fr-FR')} kHz${imu.gyroKHz < mcu.loopKHz ? ` (limitée par le ${c.imu})` : ''}.`]);
+    const need = 1 + VIDEO[c.video].uart + (c.gps ? 1 : 0) + 1;
+    out.push([need > mcu.uarts ? 'bad' : 'good', `Ports série : ${need} utilisés sur ${mcu.uarts} (récepteur${c.video !== 'none' ? ', vidéo' : ''}${c.gps ? ', GPS' : ''}, télémétrie).`]);
+    for (const r of ['5V', '10V']) {
+      const R = s.elec.rails[r];
+      if (!R.mA) continue;
+      const p = R.mA / R.limit;
+      out.push([p > 1 ? 'bad' : p > 0.8 ? 'warn' : 'good', `Régulateur ${r} : ${R.mA} mA sur ${R.limit} mA (${Math.round(p * 100)} %).`]);
+    }
+    if (c.firmware === 'ArduPilot' && c.mcu === 'F405') out.push(['warn', 'ArduPilot sur F405 : mémoire limitée, préférez un H743.']);
+    if (c.firmware === 'INAV' && !c.gps) out.push(['warn', 'INAV sans GPS : les modes de navigation (retour maison, missions) sont indisponibles.']);
+    if (c.firmware === 'Betaflight' && c.gps) out.push(['info', 'Betaflight + GPS : le retour de secours GPS Rescue est disponible.']);
+    if (c.cells >= 5) out.push(['info', `Batterie ${c.cells}S : condensateur 50 V low-ESR obligatoire sur l'entrée ESC.`]);
+    if (s.hover) out.push(['info', `Bruit moteur au stationnaire : ${Math.round(s.noiseHz)} Hz, passage de pales ${Math.round(s.bpfHz)} Hz. Activez le filtre RPM (DShot bidirectionnel).`]);
+    return out;
+  }
+
+  /* ---------- Production ---------- */
+  const DISCOUNTS = [[1000, 0.30], [100, 0.20], [25, 0.12], [10, 0.06], [1, 0]];
+  function discountFor(qty) { for (const [q, d] of DISCOUNTS) if (qty >= q) return d; return 0; }
+  function assemblyHours(c, qty) {
+    const t1 = 75 + (c.video !== 'none' ? 15 : 0) + (c.gps ? 12 : 0) + (c.wheelbase > 400 ? 40 : 0);
+    const b = Math.log2(0.85);
+    let total = 0;
+    const n = Math.min(qty, 20000);
+    for (let i = 1; i <= n; i++) total += Math.max(t1 * 0.35, t1 * Math.pow(i, b));
+    return { firstMin: t1, totalH: total / 60 };
+  }
+  const CHECKLIST = [
+    'Contrôle à réception : références, quantités, état visuel des composants',
+    'Montage des moteurs sur les bras (vis de longueur vérifiée, frein-filet)',
+    'Soudure des fils moteurs sur l\'ESC 4-en-1',
+    'Soudure du connecteur batterie et du condensateur low-ESR',
+    'Première mise sous tension derrière un limiteur de courant (smoke stopper)',
+    'Montage de la pile FC/ESC sur silent-blocs, nappe 8 broches',
+    'Câblage récepteur, vidéo et GPS sur les ports série',
+    'Flash du firmware, configuration des ports et du protocole DShot',
+    'Calibrage de l\'accéléromètre et contrôle de l\'orientation de l\'IMU',
+    'Sens de rotation des moteurs vérifié, hélices démontées',
+    'Appairage radio, modes de vol et failsafe testés',
+    'Montage des hélices (sens CW / CCW) et serrage des écrous',
+    'Vol de test stationnaire et lecture de la blackbox',
+  ];
+
+  /* ---------- Outils mathématiques ---------- */
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function gauss(rng) { let u = 0; while (!u) u = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * rng()); }
+  function qMul(a, b) {
+    return [
+      a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
+      a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
+      a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
+      a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0],
+    ];
+  }
+  function qNormalize(q) { const n = Math.hypot(q[0], q[1], q[2], q[3]) || 1; return [q[0] / n, q[1] / n, q[2] / n, q[3] / n]; }
+  function qToMat(q) {
+    const [w, x, y, z] = q;
+    return [
+      1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y),
+      2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x),
+      2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y),
+    ];
+  }
+  const yawOf = R => Math.atan2(R[2], R[8]);
+  const yawQuat = psi => [Math.cos(psi / 2), 0, Math.sin(psi / 2), 0];
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const norm = a => Math.hypot(a[0], a[1], a[2]);
+
+  /* ---------- Simulation 6-DoF ----------
+     Repère : y vers le haut, avant = −z, droite = +x.
+     Moteurs : 0 avant-droit, 1 arrière-gauche, 2 avant-gauche, 3 arrière-droit. */
+  class QuadSim {
+    constructor(s) { this.configure(s); this.reset(); }
+    configure(s) {
+      this.m = s.auwG / 1000;
+      const a = s.armL * Math.SQRT1_2;
+      this.a = a; this.rx = [a, -a, -a, a]; this.rz = [-a, a, -a, a]; this.sp = [1, 1, -1, -1];
+      this.kq = s.kq; this.I = s.inertia.slice(); this.Tmax = s.full.thrustN; this.tau = s.tau;
+      this.CdA = s.CdA; this.cells = s.cells; this.Vnom = s.cells * 3.7; this.capAh = s.capacityAh;
+      this.Rint = s.Rint; this.table = s.table; this.elecA = s.elecA;
+    }
+    reset(pos) {
+      this.p = pos ? pos.slice() : [0, 0, 0];
+      this.v = [0, 0, 0]; this.acc = [0, 0, 0]; this.q = [1, 0, 0, 0]; this.w = [0, 0, 0];
+      this.T = [0, 0, 0, 0]; this.soc = 1; this.Ibat = 0; this.armed = false; this.crashed = false;
+      this.time = 0; this.flightTime = 0; this.onGround = true; this.crashReason = '';
+    }
+    vbat() { return Math.max(0, this.cells * (3.5 + 0.7 * clamp(this.soc, 0, 1)) - this.Ibat * this.Rint); }
+    tmaxNow() { if (this.soc <= 0) return this.Tmax * 0.25; const r = this.vbat() / this.Vnom; return this.Tmax * Math.min(1.12, r * r); }
+    _interp(T, col) {
+      const tb = this.table, n = tb.length;
+      if (T <= 0) return 0;
+      for (let i = 1; i < n; i++) if (tb[i][0] >= T) { const f = (T - tb[i - 1][0]) / ((tb[i][0] - tb[i - 1][0]) || 1); return col === 'th' ? (i - 1 + f) / (n - 1) : tb[i - 1][1] + f * (tb[i][1] - tb[i - 1][1]); }
+      return col === 'th' ? 1 : tb[n - 1][1];
+    }
+    throttleOf(i) { return this._interp(this.T[i] * this.Vnom * this.Vnom / Math.max(1, this.vbat() * this.vbat()), 'th'); }
+    step(h, cmd, wind, infBattery) {
+      const Tm = this.tmaxNow();
+      const k = 1 - Math.exp(-h / this.tau);
+      const live = this.armed && !this.crashed;
+      let F = 0, tx = 0, ty = 0, tz = 0, Ib = 0;
+      for (let i = 0; i < 4; i++) {
+        const c = live ? clamp(cmd[i], 0, Tm) : 0;
+        this.T[i] += (c - this.T[i]) * k;
+        const T = this.T[i];
+        F += T; tx += -this.rz[i] * T; tz += this.rx[i] * T; ty += this.sp[i] * this.kq * T;
+        Ib += this._interp(T, 'I');
+      }
+      this.Ibat = Ib + (this.armed ? this.elecA : this.elecA * 0.5);
+      if (!infBattery) this.soc = Math.max(0, this.soc - this.Ibat * h / (this.capAh * 3600));
+      const R = qToMat(this.q);
+      const up = [R[1], R[4], R[7]];
+      const vr = [this.v[0] - wind[0], this.v[1] - wind[1], this.v[2] - wind[2]];
+      const sp = norm(vr);
+      const kd = 0.5 * RHO * this.CdA * sp / this.m;
+      for (let j = 0; j < 3; j++) this.acc[j] = up[j] * F / this.m - kd * vr[j] - (j === 1 ? G : 0);
+      for (let j = 0; j < 3; j++) { this.v[j] += this.acc[j] * h; this.p[j] += this.v[j] * h; }
+      const I = this.I, w = this.w;
+      const Iw = [I[0] * w[0], I[1] * w[1], I[2] * w[2]];
+      const gyr = cross(w, Iw);
+      const tau = [tx, ty, tz];
+      for (let j = 0; j < 3; j++) w[j] += ((tau[j] - gyr[j] - I[j] * 0.6 * w[j]) / I[j]) * h;
+      const dq = qMul(this.q, [0, w[0], w[1], w[2]]);
+      this.q = qNormalize([this.q[0] + 0.5 * dq[0] * h, this.q[1] + 0.5 * dq[1] * h, this.q[2] + 0.5 * dq[2] * h, this.q[3] + 0.5 * dq[3] * h]);
+      // Contact sol
+      this.onGround = false;
+      if (this.p[1] <= 0) {
+        this.p[1] = 0;
+        const impact = -this.v[1];
+        const tilt = Math.acos(clamp(up[1], -1, 1));
+        const hspeed = Math.hypot(this.v[0], this.v[2]);
+        if (!this.crashed && (impact > 4.5 || (tilt > 65 * DEG && (impact > 0.6 || hspeed > 1.5)))) {
+          this.crashed = true;
+          this.crashReason = impact > 4.5 ? `Impact vertical à ${impact.toFixed(1)} m/s` : `Contact au sol incliné à ${Math.round(tilt / DEG)}°`;
+        }
+        if (this.v[1] < 0) this.v[1] = 0;
+        const f = Math.max(0, 1 - 10 * h);
+        this.v[0] *= f; this.v[2] *= f;
+        if (F < this.m * G * 1.02) {
+          this.q = yawQuat(yawOf(qToMat(this.q)));
+          this.w = [0, this.w[1] * f, 0];
+        }
+        this.onGround = true;
+      }
+      this.time += h;
+      if (this.armed && !this.onGround) this.flightTime += h;
+    }
+    attitude() {
+      const R = qToMat(this.q);
+      return { roll: Math.asin(clamp(R[3], -1, 1)) / DEG, pitch: Math.asin(clamp(-R[5], -1, 1)) / DEG, yaw: yawOf(R) / DEG, R };
+    }
+  }
+
+  function effectiveGains(g, tau) {
+    const rate = Math.min(g.rate, 0.5 / tau);
+    const att = Math.min(g.att, rate / 3);
+    const vel = Math.min(g.vel, att / 2.2);
+    const pos = Math.min(g.pos, vel / 2);
+    return { rate, att, vel, pos };
+  }
+
+  /* Constante de temps de réponse en accélération, utilisée pour adapter l'entraînement au drone */
+  function responseTau(s, gains) { const g = effectiveGains(gains, s.tau); return clamp(1.2 / g.att, 0.12, 0.8); }
+
+  class Wind {
+    constructor(seed) { this.g = [0, 0, 0]; this.rng = mulberry32(seed || 7); }
+    step(h, mean, dirDeg, gust) {
+      const d = dirDeg * DEG;
+      const sigma = gust * (1 + 0.45 * mean);
+      for (let j = 0; j < 3; j++) this.g[j] += -this.g[j] / 1.6 * h + sigma * (j === 1 ? 0.35 : 1) * Math.sqrt(h) * gauss(this.rng);
+      return [Math.sin(d) * mean + this.g[0], this.g[1], -Math.cos(d) * mean + this.g[2]];
+    }
+  }
+
+  /* Navigation par apprentissage : constantes partagées entre l'environnement d'entraînement et la simulation */
+  const NAV = { AMAX: 6, DT: 0.05, TAU_A: 0.12, DRAG: 0.25, EP_LEN: 160, OBS: 9, ACT: 3 };
+  function navObs(rel, v, accF) {
+    const o = new Float64Array(9);
+    for (let i = 0; i < 3; i++) { o[i] = clamp(rel[i] / 5, -3, 3); o[3 + i] = clamp(v[i] / 5, -3, 3); o[6 + i] = accF[i] / NAV.AMAX; }
+    return o;
+  }
+
+  class Autopilot {
+    constructor() { this.reset(); this.rng = mulberry32(99); }
+    reset() {
+      this.vint = [0, 0, 0]; this.yawDes = 0; this.accF = [0, 0, 0]; this.policyT = 0; this.policyCmd = [0, 0, 0];
+      this.wp = 0; this.landing = false; this.altHold = 1.5; this.holdXZ = null;
+    }
+    takeoff(sim) {
+      if (sim.crashed) return;
+      sim.armed = true; this.landing = false; this.vint = [0, 0, 0];
+      this.altHold = Math.max(1.5, sim.p[1]); this.yawDes = yawOf(qToMat(sim.q));
+    }
+    land(sim) { this.landing = true; this.holdXZ = [sim.p[0], sim.p[2]]; }
+    step(sim, h, inp) {
+      const g = effectiveGains(inp.gains, sim.tau);
+      if (!sim.armed || sim.crashed) return [0, 0, 0, 0];
+      // Mesures (bruit capteurs optionnel)
+      const nz = inp.noise ? 1 : 0, r = this.rng;
+      const p = sim.p.map(x => x + nz * 0.03 * gauss(r));
+      const v = sim.v.map(x => x + nz * 0.05 * gauss(r));
+      const w = sim.w.map(x => x + nz * 0.06 * gauss(r));
+      const q = sim.q;
+      let aCmd = null, vdes = null;
+      const wps = inp.waypoints || [];
+      const target = wps.length ? wps[this.wp % wps.length] : [0, 1.5, 0];
+      if (inp.mode !== 'manual' && wps.length && !this.landing) {
+        const d = Math.hypot(target[0] - sim.p[0], target[1] - sim.p[1], target[2] - sim.p[2]);
+        if (d < inp.accept) this.wp = (this.wp + 1) % wps.length;
+      }
+      if (this.landing) {
+        const hx = this.holdXZ || [p[0], p[2]];
+        vdes = [g.pos * (hx[0] - p[0]), p[1] > 1.5 ? -1.4 : -0.6, g.pos * (hx[1] - p[2])];
+        if (sim.onGround && Math.hypot(...sim.v) < 0.4) { sim.armed = false; this.landing = false; return [0, 0, 0, 0]; }
+      } else if (inp.mode === 'manual') {
+        const m = inp.manual;
+        this.yawDes += m.yaw * 1.8 * h;
+        const s = inp.vmax;
+        const c = Math.cos(this.yawDes), sn = Math.sin(this.yawDes);
+        const fwd = [-sn, 0, -c], right = [c, 0, -sn];
+        if (m.up !== 0) this.altHold = Math.max(0.3, p[1]);
+        vdes = [ (fwd[0] * m.fwd + right[0] * m.right) * s,
+                 m.up !== 0 ? m.up * Math.min(3, s * 0.6) : g.pos * 1.5 * (this.altHold - p[1]),
+                 (fwd[2] * m.fwd + right[2] * m.right) * s ];
+      } else if (inp.mode === 'ai' && inp.policy) {
+        this.policyT -= h;
+        if (this.policyT <= 0) {
+          this.policyT += NAV.DT;
+          const rel = [target[0] - p[0], target[1] - p[1], target[2] - p[2]];
+          const a = inp.policy(navObs(rel, v, this.accF));
+          for (let j = 0; j < 3; j++) this.policyCmd[j] = clamp(a[j], -1, 1) * NAV.AMAX;
+        }
+        const k = 1 - Math.exp(-h / (inp.tauA || NAV.TAU_A));
+        for (let j = 0; j < 3; j++) this.accF[j] += (this.policyCmd[j] - this.accF[j]) * k;
+        aCmd = this.accF.slice();
+        this.vint = [0, 0, 0];
+      } else {
+        const e = [target[0] - p[0], target[1] - p[1], target[2] - p[2]];
+        vdes = e.map(x => x * g.pos);
+        const hn = Math.hypot(vdes[0], vdes[2]);
+        if (hn > inp.vmax) { vdes[0] *= inp.vmax / hn; vdes[2] *= inp.vmax / hn; }
+        vdes[1] = clamp(vdes[1], -Math.min(2.5, inp.vmax * 0.5), Math.min(3.5, inp.vmax * 0.6));
+        const dx = target[0] - p[0], dz = target[2] - p[2];
+        if (Math.hypot(dx, dz) > 1.5) this.yawDes = Math.atan2(-dx, -dz);
+      }
+      if (!aCmd) {
+        aCmd = [0, 0, 0];
+        const ki = g.vel * 0.35;
+        for (let j = 0; j < 3; j++) {
+          const ev = vdes[j] - v[j];
+          if (Math.abs(ev) < 1.2) this.vint[j] = clamp(this.vint[j] + ki * ev * h, -4, 4);
+          aCmd[j] = g.vel * ev + this.vint[j];
+        }
+      }
+      if (inp.mode !== 'ai') { const k = 1 - Math.exp(-h / 0.03); for (let j = 0; j < 3; j++) this.accF[j] += (aCmd[j] - this.accF[j]) * k; }
+      // Vecteur de poussée désiré + limite d'inclinaison
+      const f = [sim.m * aCmd[0], sim.m * (aCmd[1] + G), sim.m * aCmd[2]];
+      f[1] = Math.max(f[1], 0.3 * sim.m * G);
+      const maxTilt = Math.tan(inp.maxTilt * DEG);
+      const fh = Math.hypot(f[0], f[2]);
+      if (fh > f[1] * maxTilt) { const s = f[1] * maxTilt / fh; f[0] *= s; f[2] *= s; }
+      // La consigne de cap est bornée autour du cap actuel : l'erreur reste petite et ne perturbe pas roulis/tangage
+      const yawNow = yawOf(qToMat(q));
+      let dy = this.yawDes - yawNow; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      return attitudeControl(sim, f, yawNow + clamp(dy, -0.35, 0.35), g, q, w);
+    }
+  }
+
+  /* Contrôle géométrique d'attitude (Lee) + mixeur X avec gestion de la saturation */
+  function attitudeControl(sim, f, yawDes, g, q, w) {
+    const R = qToMat(q);
+    const fn = norm(f) || 1e-6;
+    const yd = [f[0] / fn, f[1] / fn, f[2] / fn];
+    const hdg = [-Math.sin(yawDes), 0, -Math.cos(yawDes)];
+    let xd = cross(hdg, yd); let xn = norm(xd);
+    if (xn < 1e-6) { xd = [1, 0, 0]; xn = 1; }
+    xd = [xd[0] / xn, xd[1] / xn, xd[2] / xn];
+    const zd = cross(xd, yd);
+    const Rd = [xd[0], yd[0], zd[0], xd[1], yd[1], zd[1], xd[2], yd[2], zd[2]];
+    const E = new Array(9);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+      let a = 0, b = 0;
+      for (let k = 0; k < 3; k++) { a += Rd[k * 3 + i] * R[k * 3 + j]; b += R[k * 3 + i] * Rd[k * 3 + j]; }
+      E[i * 3 + j] = a - b;
+    }
+    const eR = [0.5 * E[7], 0.5 * E[2], 0.5 * E[3]];
+    const I = sim.I;
+    const Iw = [I[0] * w[0], I[1] * w[1], I[2] * w[2]];
+    const gyr = cross(w, Iw);
+    const tau = [0, 0, 0];
+    for (let j = 0; j < 3; j++) {
+      const kr = j === 1 ? g.att * 0.5 : g.att;
+      const wdes = -kr * eR[j];
+      tau[j] = I[j] * g.rate * (wdes - w[j]) + gyr[j];
+    }
+    const F = Math.max(0, f[0] * R[1] + f[1] * R[4] + f[2] * R[7]);
+    return mix(sim, F, tau);
+  }
+  function mix(sim, F, tau) {
+    const a = sim.a, kq = sim.kq;
+    const rowX = [a, -a, a, -a], rowY = [kq, kq, -kq, -kq], rowZ = [a, -a, -a, a];
+    const Tm = sim.tmaxNow(), Tmin = 0.03 * sim.Tmax;
+    const drp = [0, 0, 0, 0], dy = [0, 0, 0, 0];
+    for (let i = 0; i < 4; i++) {
+      drp[i] = rowX[i] * tau[0] / (4 * a * a) + rowZ[i] * tau[2] / (4 * a * a);
+      dy[i] = rowY[i] * tau[1] / (4 * kq * kq);
+    }
+    const range = arr => Math.max(...arr) - Math.min(...arr);
+    const avail = Tm - Tmin;
+    let sRP = 1, sY = 1;
+    const tot = drp.map((x, i) => x + dy[i]);
+    if (range(tot) > avail) {
+      const rr = range(drp);
+      if (rr >= avail) { sY = 0; sRP = avail / rr; }
+      else { sY = clamp((avail - rr) / Math.max(1e-9, range(tot) - rr), 0, 1); }
+    }
+    const d = drp.map((x, i) => x * sRP + dy[i] * sY);
+    const base = clamp(F / 4, Tmin - Math.min(...d), Tm - Math.max(...d));
+    return d.map(x => clamp(base + x, 0, Tm));
+  }
+
+  /* ---------- Apprentissage par renforcement : PPO ---------- */
+  class MLP {
+    constructor(sizes, rng, outScale) {
+      this.sizes = sizes; this.L = sizes.length - 1;
+      this.W = []; this.b = []; this.gW = []; this.gb = [];
+      for (let l = 0; l < this.L; l++) {
+        const ni = sizes[l], no = sizes[l + 1];
+        const W = new Float64Array(ni * no);
+        const s = (l === this.L - 1 ? outScale : 1) * Math.sqrt(1 / ni);
+        for (let i = 0; i < W.length; i++) W[i] = gauss(rng) * s;
+        this.W.push(W); this.b.push(new Float64Array(no));
+        this.gW.push(new Float64Array(ni * no)); this.gb.push(new Float64Array(no));
+      }
+    }
+    forward(x) {
+      const acts = [x]; let h = x;
+      for (let l = 0; l < this.L; l++) {
+        const ni = this.sizes[l], no = this.sizes[l + 1], W = this.W[l], b = this.b[l];
+        const out = new Float64Array(no);
+        for (let o = 0; o < no; o++) {
+          let s = b[o]; const off = o * ni;
+          for (let i = 0; i < ni; i++) s += W[off + i] * h[i];
+          out[o] = l < this.L - 1 ? Math.tanh(s) : s;
+        }
+        acts.push(out); h = out;
+      }
+      return acts;
+    }
+    backward(acts, dout) {
+      let d = Float64Array.from(dout);
+      for (let l = this.L - 1; l >= 0; l--) {
+        const ni = this.sizes[l], no = this.sizes[l + 1], W = this.W[l], gW = this.gW[l], gb = this.gb[l];
+        const hin = acts[l], hout = acts[l + 1];
+        if (l < this.L - 1) for (let o = 0; o < no; o++) d[o] *= 1 - hout[o] * hout[o];
+        const dp = new Float64Array(ni);
+        for (let o = 0; o < no; o++) {
+          const dd = d[o]; if (dd === 0) continue;
+          gb[o] += dd; const off = o * ni;
+          for (let i = 0; i < ni; i++) { gW[off + i] += dd * hin[i]; dp[i] += W[off + i] * dd; }
+        }
+        d = dp;
+      }
+    }
+    params() { const p = []; for (let l = 0; l < this.L; l++) { p.push([this.W[l], this.gW[l]]); p.push([this.b[l], this.gb[l]]); } return p; }
+    zeroGrad() { for (const g of this.gW) g.fill(0); for (const g of this.gb) g.fill(0); }
+    toJSON() { return { sizes: this.sizes, W: this.W.map(a => Array.from(a, x => +x.toFixed(6))), b: this.b.map(a => Array.from(a, x => +x.toFixed(6))) }; }
+    load(j) {
+      if (!j || JSON.stringify(j.sizes) !== JSON.stringify(this.sizes)) throw new Error('Architecture du réseau incompatible');
+      j.W.forEach((a, l) => { if (a.length !== this.W[l].length) throw new Error('Poids incomplets'); this.W[l].set(a); });
+      j.b.forEach((a, l) => this.b[l].set(a));
+    }
+  }
+  class Adam {
+    constructor(params, lr) { this.p = params; this.lr = lr; this.t = 0; this.m = params.map(([w]) => new Float64Array(w.length)); this.v = params.map(([w]) => new Float64Array(w.length)); }
+    step(maxNorm) {
+      let n2 = 0;
+      for (const [, g] of this.p) for (let i = 0; i < g.length; i++) n2 += g[i] * g[i];
+      const n = Math.sqrt(n2), sc = maxNorm && n > maxNorm ? maxNorm / n : 1;
+      this.t++;
+      const b1 = 0.9, b2 = 0.999, c1 = 1 - Math.pow(b1, this.t), c2 = 1 - Math.pow(b2, this.t);
+      this.p.forEach(([w, g], k) => {
+        const m = this.m[k], v = this.v[k];
+        for (let i = 0; i < w.length; i++) {
+          const gi = g[i] * sc;
+          m[i] = b1 * m[i] + (1 - b1) * gi; v[i] = b2 * v[i] + (1 - b2) * gi * gi;
+          w[i] -= this.lr * (m[i] / c1) / (Math.sqrt(v[i] / c2) + 1e-8);
+        }
+      });
+      return n;
+    }
+  }
+  class PPOAgent {
+    constructor(seed) {
+      this.rng = mulberry32(seed || 1234);
+      this.pi = new MLP([NAV.OBS, 64, 64, NAV.ACT], this.rng, 0.01);
+      this.vf = new MLP([NAV.OBS, 64, 64, 1], this.rng, 1);
+      this.logStd = new Float64Array(NAV.ACT).fill(Math.log(0.6));
+      this.gLogStd = new Float64Array(NAV.ACT);
+      this.optPi = new Adam([...this.pi.params(), [this.logStd, this.gLogStd]], 3e-4);
+      this.optV = new Adam(this.vf.params(), 1e-3);
+      this.tauA = NAV.TAU_A;
+    }
+    act(obs, det) {
+      const acts = this.pi.forward(obs), mu = acts[acts.length - 1];
+      const a = new Float64Array(NAV.ACT); let logp = 0;
+      for (let j = 0; j < NAV.ACT; j++) {
+        const e = det ? 0 : gauss(this.rng);
+        a[j] = mu[j] + Math.exp(this.logStd[j]) * e;
+        logp += -0.5 * e * e - this.logStd[j] - 0.5 * Math.log(TAU);
+      }
+      return { a, logp, mu, v: this.value(obs) };
+    }
+    value(obs) { const a = this.vf.forward(obs); return a[a.length - 1][0]; }
+    policyMean(obs) { const a = this.pi.forward(obs); return a[a.length - 1]; }
+    toJSON() { return { format: 'droneforge-ppo-1', tauA: this.tauA, pi: this.pi.toJSON(), vf: this.vf.toJSON(), logStd: Array.from(this.logStd) }; }
+    load(j) {
+      if (!j || j.format !== 'droneforge-ppo-1') throw new Error('Fichier de poids non reconnu');
+      this.pi.load(j.pi); this.vf.load(j.vf); this.logStd.set(j.logStd); this.tauA = j.tauA || NAV.TAU_A;
+    }
+  }
+  class NavEnv {
+    constructor(rng, tauA) { this.rng = rng; this.tauA = tauA || NAV.TAU_A; this.p = [0, 0, 0]; this.v = [0, 0, 0]; this.acc = [0, 0, 0]; this.wind = [0, 0, 0]; this.reset(); }
+    reset() {
+      const r = this.rng;
+      let d = [gauss(r), gauss(r) * 0.6, gauss(r)]; const n = norm(d) || 1;
+      const dist = 1 + 5.5 * r();
+      this.p = d.map(x => x / n * dist);
+      this.v = [0, 0, 0].map(() => (r() - 0.5) * 2);
+      this.acc = [0, 0, 0];
+      this.wind = [(r() - 0.5) * 3, (r() - 0.5) * 1, (r() - 0.5) * 3];
+      this.t = 0; this.prevD = norm(this.p); this.trail = [];
+    }
+    obs() { return navObs([-this.p[0], -this.p[1], -this.p[2]], this.v, this.acc); }
+    step(a) {
+      const k = 1 - Math.exp(-NAV.DT / this.tauA); let a2 = 0;
+      for (let i = 0; i < 3; i++) {
+        const ac = clamp(a[i], -1, 1); a2 += ac * ac;
+        this.acc[i] += (ac * NAV.AMAX - this.acc[i]) * k;
+        this.v[i] += (this.acc[i] - NAV.DRAG * this.v[i] + this.wind[i]) * NAV.DT;
+        this.p[i] += this.v[i] * NAV.DT;
+      }
+      const d = norm(this.p), sp = norm(this.v);
+      let r = 2 * (this.prevD - d) - 0.01 * a2 + 0.05 * Math.exp(-3 * d);
+      if (d < 0.4 && sp < 0.6) r += 0.1;
+      this.prevD = d; this.t++;
+      let done = this.t >= NAV.EP_LEN;
+      if (d > 16) { done = true; r -= 2; }
+      return { r, done, success: done && d < 0.5 };
+    }
+  }
+  class PPOStats {
+    constructor() { this.updates = 0; this.steps = 0; this.recent = []; this.history = []; this.kl = 0; this.clipFrac = 0; }
+    episode(ret, ok) { this.recent.push([ret, ok ? 1 : 0]); if (this.recent.length > 100) this.recent.shift(); }
+    meanReturn() { return this.recent.length ? this.recent.reduce((s, x) => s + x[0], 0) / this.recent.length : 0; }
+    successRate() { return this.recent.length ? this.recent.reduce((s, x) => s + x[1], 0) / this.recent.length : 0; }
+  }
+  /* Générateur d'entraînement : rend la main très souvent pour ne jamais figer l'interface. */
+  function* ppoTrainer(agent, hp, stats, live, seed) {
+    const rng = mulberry32(seed || 42);
+    const N = 16, T = 128, B = N * T;
+    agent.tauA = hp.tauA || NAV.TAU_A;
+    const envs = Array.from({ length: N }, () => new NavEnv(rng, agent.tauA));
+    live.envs = envs;
+    const obs = new Array(B), act = new Array(B);
+    const logp = new Float64Array(B), val = new Float64Array(B), rew = new Float64Array(B), done = new Uint8Array(B);
+    const epRet = new Float64Array(N);
+    while (true) {
+      for (let t = 0; t < T; t++) {
+        for (let e = 0; e < N; e++) {
+          const i = t * N + e, env = envs[e];
+          const o = env.obs(), r = agent.act(o, false);
+          obs[i] = o; act[i] = r.a; logp[i] = r.logp; val[i] = r.v;
+          const st = env.step(r.a);
+          rew[i] = st.r; done[i] = st.done ? 1 : 0; epRet[e] += st.r;
+          env.trail.push([env.p[0], env.p[1], env.p[2]]); if (env.trail.length > 30) env.trail.shift();
+          if (st.done) { stats.episode(epRet[e], st.success); epRet[e] = 0; env.reset(); }
+        }
+        stats.steps += N;
+        yield 0;
+      }
+      const gamma = hp.gamma, lam = 0.95;
+      const lastV = envs.map(e => agent.value(e.obs()));
+      const adv = new Float64Array(B), ret = new Float64Array(B);
+      for (let e = 0; e < N; e++) {
+        let gae = 0;
+        for (let t = T - 1; t >= 0; t--) {
+          const i = t * N + e;
+          const nextV = t === T - 1 ? lastV[e] : val[(t + 1) * N + e];
+          const nt = 1 - done[i];
+          const delta = rew[i] + gamma * nextV * nt - val[i];
+          gae = delta + gamma * lam * nt * gae;
+          adv[i] = gae; ret[i] = gae + val[i];
+        }
+      }
+      let mean = 0; for (let i = 0; i < B; i++) mean += adv[i]; mean /= B;
+      let vr = 0; for (let i = 0; i < B; i++) vr += (adv[i] - mean) ** 2; const sd = Math.sqrt(vr / B) + 1e-8;
+      for (let i = 0; i < B; i++) adv[i] = (adv[i] - mean) / sd;
+      const idx = Array.from({ length: B }, (_, i) => i);
+      const MB = 256, EPOCHS = 5;
+      agent.optPi.lr = hp.lr; agent.optV.lr = hp.lr * 3;
+      let klSum = 0, klN = 0, clipN = 0;
+      for (let ep = 0; ep < EPOCHS; ep++) {
+        for (let i = B - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+        for (let s = 0; s < B; s += MB) {
+          agent.pi.zeroGrad(); agent.vf.zeroGrad(); agent.gLogStd.fill(0);
+          for (let k = s; k < s + MB; k++) {
+            const i = idx[k], o = obs[i], a = act[i];
+            const acts = agent.pi.forward(o), mu = acts[acts.length - 1];
+            let lp = 0;
+            const z = new Float64Array(NAV.ACT);
+            for (let j = 0; j < NAV.ACT; j++) { const sdj = Math.exp(agent.logStd[j]); z[j] = (a[j] - mu[j]) / sdj; lp += -0.5 * z[j] * z[j] - agent.logStd[j] - 0.5 * Math.log(TAU); }
+            const ratio = Math.exp(lp - logp[i]);
+            klSum += logp[i] - lp; klN++;
+            const A = adv[i];
+            const active = (A >= 0 && ratio <= 1 + hp.clip) || (A < 0 && ratio >= 1 - hp.clip);
+            if (!active) clipN++;
+            const c = active ? -ratio * A / MB : 0;
+            const dmu = new Float64Array(NAV.ACT);
+            if (c !== 0) for (let j = 0; j < NAV.ACT; j++) { const sdj = Math.exp(agent.logStd[j]); dmu[j] = c * z[j] / sdj; agent.gLogStd[j] += c * (z[j] * z[j] - 1); }
+            agent.pi.backward(acts, dmu);
+            const va = agent.vf.forward(o), v = va[va.length - 1][0];
+            agent.vf.backward(va, [(v - ret[i]) / MB]);
+          }
+          for (let j = 0; j < NAV.ACT; j++) agent.gLogStd[j] -= hp.ent;
+          agent.optPi.step(0.5); agent.optV.step(1.0);
+          for (let j = 0; j < NAV.ACT; j++) agent.logStd[j] = clamp(agent.logStd[j], -3, 0.5);
+          yield 1;
+        }
+      }
+      stats.updates++;
+      stats.kl = klSum / Math.max(1, klN); stats.clipFrac = clipN / Math.max(1, klN);
+      stats.history.push({ u: stats.updates, ret: stats.meanReturn(), ok: stats.successRate(), std: Math.exp(agent.logStd.reduce((s, x) => s + x, 0) / NAV.ACT) });
+      if (stats.history.length > 400) stats.history.shift();
+      yield 2;
+    }
+  }
+
+  return {
+    G, RHO, TAU, DEG, clamp, PRESETS, WINDINGS, ESC, MCU, IMU, VIDEO, FIRMWARES, LIMITS, CHECKLIST, DISCOUNTS,
+    defaultConfig, applyPreset, sanitizeConfig, designation, motorParams, operatingPoint, electronicsLoad, buildBOM,
+    summarize, motorChecks, boardChecks, discountFor, assemblyHours,
+    mulberry32, gauss, qToMat, yawOf, QuadSim, Autopilot, Wind, effectiveGains, responseTau, NAV, navObs,
+    MLP, Adam, PPOAgent, NavEnv, PPOStats, ppoTrainer,
+  };
+})();
+if (typeof module !== 'undefined') module.exports = DF;
+
+</script>
+<script>
+/* =====================================================================
+   DroneForge — interface, rendu 3D et orchestration des 5 modules
+   ===================================================================== */
+(() => {
+  'use strict';
+  const { clamp, TAU, DEG } = DF;
+  const $ = (s, r = document) => r.querySelector(s);
+  const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const C = {};
+  ['bg', 'bg-2', 'panel', 'panel-2', 'line', 'line-2', 'fg', 'muted', 'dim', 'accent', 'cyan', 'good', 'warn', 'bad', 'phase-a', 'phase-b', 'phase-c'].forEach(k => { C[k.replace('-', '')] = cssv('--' + k) || '#888'; });
+  const reducedMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fmtN = (x, d = 0) => Number(x).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+  /* ================= État & persistance ================= */
+  const STORE_KEY = 'droneforge.project.v2', POLICY_KEY = 'droneforge.policy.v2';
+  const store = {
+    get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+    del(k) { try { localStorage.removeItem(k); } catch (e) { /* stockage indisponible */ } },
+  };
+  const TABS = ['motor', 'simulation', 'ai', 'motherboard', 'production'];
+  function defaultState() {
+    return {
+      cfg: DF.defaultConfig(),
+      ui: { tab: 'motor', throttle: 0.6, showProp: true, explode: false, cutaway: false, phases: true, boardExplode: false, signals: true, prodExplode: 0, autoRotate: !reducedMotion },
+      sim: { mode: 'waypoints', wind: 2, windDir: 45, gust: 0.3, noise: true, infBattery: false, vmax: 6, maxTilt: 35, follow: true,
+        gains: { pos: 1.2, vel: 3, att: 10, rate: 30 }, waypoints: [[0, 2, -4], [4, 3, 0], [0, 2.5, 4], [-4, 3, 0]], sel: 0 },
+      ai: { lr: 3e-4, clip: 0.2, ent: 0.003, gamma: 0.99 },
+      prod: { qty: 10, currency: 'XOF' },
+      board: { selected: 'mcu' },
+      checklist: {},
+    };
+  }
+  function mergeState(base, saved) {
+    if (!saved || typeof saved !== 'object') return base;
+    for (const k of Object.keys(base)) {
+      if (!(k in saved)) continue;
+      const b = base[k], s = saved[k];
+      if (b && typeof b === 'object' && !Array.isArray(b) && s && typeof s === 'object' && !Array.isArray(s) && k !== 'checklist') base[k] = mergeState(b, s);
+      else if (k === 'checklist' && s && typeof s === 'object') base[k] = s;
+      else if (Array.isArray(b) ? Array.isArray(s) : typeof s === typeof b) base[k] = s;
+    }
+    return base;
+  }
+  function validateState(st) {
+    st.cfg = DF.sanitizeConfig(st.cfg);
+    if (!TABS.includes(st.ui.tab)) st.ui.tab = 'motor';
+    const w = st.sim.waypoints.filter(p => Array.isArray(p) && p.length === 3 && p.every(Number.isFinite)).map(p => [clamp(p[0], -11, 11), clamp(p[1], 0.5, 12), clamp(p[2], -11, 11)]);
+    st.sim.waypoints = w.length ? w.slice(0, 12) : defaultState().sim.waypoints;
+    st.sim.sel = clamp(st.sim.sel | 0, 0, st.sim.waypoints.length - 1);
+    if (!['waypoints', 'manual', 'ai'].includes(st.sim.mode)) st.sim.mode = 'waypoints';
+    if (!['XOF', 'EUR', 'USD'].includes(st.prod.currency)) st.prod.currency = 'XOF';
+    st.prod.qty = clamp(Math.round(st.prod.qty) || 1, 1, 10000);
+    return st;
+  }
+  let S = validateState(mergeState(defaultState(), store.get(STORE_KEY)));
+  const hashTab = (location.hash || '').slice(1);
+  if (TABS.includes(hashTab)) S.ui.tab = hashTab;
+  let saveTimer = 0;
+  function save() { clearTimeout(saveTimer); saveTimer = setTimeout(() => store.set(STORE_KEY, S), 300); }
+  let SUM = DF.summarize(S.cfg);
+
+  /* ================= Aides DOM ================= */
+  function el(tag, props, ...kids) {
+    const e = document.createElement(tag);
+    if (props) for (const k in props) {
+      const v = props[k];
+      if (v == null || v === false) continue;
+      if (k === 'class') e.className = v;
+      else if (k === 'html') e.innerHTML = v;
+      else if (k === 'text') e.textContent = v;
+      else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), v);
+      else if (k === 'style') e.style.cssText = v;
+      else e.setAttribute(k, v === true ? '' : v);
+    }
+    for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+    return e;
+  }
+  const sec = (title, aside, ...kids) => el('section', { class: 'sec' }, el('h3', null, title, aside ? el('span', { class: 'aside' }, aside) : null), ...kids);
+  const head = (title, text) => el('div', { class: 'panel-head' }, el('h2', null, title), text ? el('p', null, text) : null);
+  function range(o) {
+    const out = el('output', { class: 'val', for: o.id });
+    const inp = el('input', { type: 'range', id: o.id, min: o.min, max: o.max, step: o.step, value: o.value });
+    const show = () => { out.textContent = o.fmt(Number(inp.value)); };
+    inp.addEventListener('input', () => { show(); o.onInput(Number(inp.value)); });
+    show();
+    const row = el('div', { class: 'ctl' }, el('div', { class: 'ctl-head' }, el('label', { for: o.id }, o.label), out), inp);
+    row.set = v => { inp.value = v; show(); };
+    return row;
+  }
+  function select(o) {
+    const s = el('select', { id: o.id }, o.options.map(([v, t]) => el('option', { value: v }, t)));
+    s.value = String(o.value);
+    s.addEventListener('change', () => o.onChange(s.value));
+    const f = el('div', { class: 'field' }, el('label', { for: o.id }, o.label), s);
+    f.set = v => { s.value = String(v); };
+    f.input = s;
+    return f;
+  }
+  function toggle(o) {
+    const i = el('input', { type: 'checkbox', id: o.id });
+    i.checked = !!o.checked;
+    i.addEventListener('change', () => o.onChange(i.checked));
+    const l = el('label', { class: 'switch', for: o.id }, el('span', null, o.label), i);
+    l.set = v => { i.checked = !!v; };
+    return l;
+  }
+  function seg(o) {
+    const wrap = el('div', { class: 'seg', role: 'group', 'aria-label': o.label });
+    const btns = o.options.map(([v, t]) => {
+      const b = el('button', { type: 'button', 'aria-pressed': String(v === o.value) }, t);
+      b.addEventListener('click', () => { wrap.set(v); o.onChange(v); });
+      b.dataset.v = v; return b;
+    });
+    wrap.append(...btns);
+    wrap.set = v => btns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === String(v))));
+    return wrap;
+  }
+  function kpiGrid(items, cls) {
+    const g = el('div', { class: 'kpis ' + (cls || '') });
+    const map = {};
+    for (const it of items) {
+      const v = el('div', { class: 'kpi-v' }, '—');
+      const k = el('div', { class: 'kpi' }, el('div', { class: 'kpi-l', title: it.label }, it.label), v);
+      map[it.id] = { k, v, unit: it.unit || '' };
+      g.append(k);
+    }
+    g.setK = (id, value, state) => {
+      const m = map[id]; if (!m) return;
+      m.v.textContent = value;
+      if (m.unit) m.v.append(el('small', null, m.unit));
+      m.k.className = 'kpi' + (state ? ' ' + state : '');
+    };
+    return g;
+  }
+  function renderChecks(ul, list) { ul.replaceChildren(...list.map(([s, t]) => el('li', { class: s }, t))); }
+  let toastTimer = 0;
+  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2800); }
+  async function copyText(text, okMsg) {
+    try { await navigator.clipboard.writeText(text); toast(okMsg || 'Copié dans le presse-papiers'); return true; }
+    catch (e) { toast('Copie bloquée par le navigateur : sélectionnez le texte et copiez-le manuellement.'); return false; }
+  }
+  function download(name, text, mime) {
+    try {
+      const url = URL.createObjectURL(new Blob([text], { type: mime || 'text/plain' }));
+      const a = el('a', { href: url, download: name }); document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      toast(`Téléchargement de ${name} demandé. S'il ne démarre pas, utilisez « Copier ».`);
+    } catch (e) { toast('Téléchargement impossible ici : utilisez « Copier ».'); }
+  }
+  function modal(title, body, actions) {
+    const root = $('#modal-root');
+    const close = () => { root.replaceChildren(); document.removeEventListener('keydown', onKey); };
+    const onKey = e => { if (e.key === 'Escape') close(); };
+    const box = el('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, el('h2', null, title), body, el('div', { class: 'btn-row' }, ...actions(close), el('button', { class: 'btn', type: 'button', onclick: close }, 'Fermer')));
+    const back = el('div', { class: 'modal-back', onclick: e => { if (e.target === back) close(); } }, box);
+    root.replaceChildren(back);
+    document.addEventListener('keydown', onKey);
+    const f = box.querySelector('textarea,button'); if (f) f.focus();
+    return close;
+  }
+  // Bouton à double confirmation (les boîtes confirm() natives sont bloquées dans certains cadres)
+  function confirmButton(label, confirmLabel, onConfirm, cls) {
+    const b = el('button', { type: 'button', class: 'btn ' + (cls || '') }, label);
+    let armed = 0;
+    b.addEventListener('click', () => {
+      if (armed) { clearTimeout(armed); armed = 0; b.textContent = label; onConfirm(); return; }
+      b.textContent = confirmLabel;
+      armed = setTimeout(() => { armed = 0; b.textContent = label; }, 3000);
+    });
+    return b;
+  }
+
+  /* ================= Graphiques 2D ================= */
+  function drawChart(cv, o) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const W = cv.clientWidth, H = cv.clientHeight;
+    if (!W || !H) return;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    const padL = 38, padR = o.right ? 38 : 10, padT = 10, padB = 22;
+    const pw = W - padL - padR, ph = H - padT - padB;
+    const X = x => padL + (x - o.x[0]) / ((o.x[1] - o.x[0]) || 1) * pw;
+    const Y = (y, ax) => padT + ph - (y - ax[0]) / ((ax[1] - ax[0]) || 1) * ph;
+    g.font = '10px ' + (cssv('--font-mono') || 'monospace');
+    g.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = padT + ph * i / 4;
+      g.strokeStyle = C.line; g.beginPath(); g.moveTo(padL, y + 0.5); g.lineTo(W - padR, y + 0.5); g.stroke();
+      g.fillStyle = C.muted; g.textAlign = 'right';
+      g.fillText(o.left.fmt(o.left.range[1] - (o.left.range[1] - o.left.range[0]) * i / 4), padL - 5, y + 3);
+      if (o.right) { g.textAlign = 'left'; g.fillText(o.right.fmt(o.right.range[1] - (o.right.range[1] - o.right.range[0]) * i / 4), W - padR + 5, y + 3); }
+    }
+    g.fillStyle = C.muted;
+    for (let i = 0; i <= 4; i++) {
+      const xv = o.x[0] + (o.x[1] - o.x[0]) * i / 4;
+      g.textAlign = i === 0 ? 'left' : i === 4 ? 'right' : 'center';
+      g.fillText(o.xfmt(xv), X(xv), H - 6);
+    }
+    for (const s of o.series) {
+      const ax = s.axis === 'right' ? o.right.range : o.left.range;
+      if (!s.data.length) continue;
+      if (s.fill) {
+        g.beginPath(); g.moveTo(X(s.data[0][0]), Y(ax[0], ax));
+        for (const [x, y] of s.data) g.lineTo(X(x), Y(clamp(y, ax[0], ax[1]), ax));
+        g.lineTo(X(s.data[s.data.length - 1][0]), Y(ax[0], ax)); g.closePath();
+        g.globalAlpha = 0.14; g.fillStyle = s.color; g.fill(); g.globalAlpha = 1;
+      }
+      g.beginPath(); g.strokeStyle = s.color; g.lineWidth = 1.8;
+      s.data.forEach(([x, y], i) => { const px = X(x), py = Y(clamp(y, ax[0], ax[1]), ax); i ? g.lineTo(px, py) : g.moveTo(px, py); });
+      g.stroke();
+      const [lx, ly] = s.data[s.data.length - 1];
+      if (s.dot !== false) { g.fillStyle = s.color; g.beginPath(); g.arc(X(lx), Y(clamp(ly, ax[0], ax[1]), ax), 2.8, 0, TAU); g.fill(); }
+    }
+    if (o.marker != null) {
+      const mx = X(o.marker);
+      g.strokeStyle = C.accent; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(mx + 0.5, padT); g.lineTo(mx + 0.5, padT + ph); g.stroke(); g.setLineDash([]);
+    }
+  }
+  // Borne d'axe dont le quart est un pas « rond » (4 graduations lisibles)
+  const niceMax = v => { if (v <= 0) return 1; const st = v / 4; const p = Math.pow(10, Math.floor(Math.log10(st))); const m = st / p; return [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(x => x >= m - 1e-9) * p * 4; };
+
+  /* ================= Moteur 3D ================= */
+  let HAS3D = false;
+  try { HAS3D = typeof THREE !== 'undefined' && !!(document.createElement('canvas').getContext('webgl2') || document.createElement('canvas').getContext('webgl')); } catch (e) { HAS3D = false; }
+  const vp = $('#viewport-3d-container');
+  let renderer = null, camera = null, controls = null, raycaster = null;
+  const views = {};
+  function showFallback(msg) {
+    HAS3D = false;
+    vp.append(el('div', { class: 'vp-fallback' }, el('div', null, el('strong', null, 'Vue 3D indisponible'), msg || 'WebGL ou la bibliothèque Three.js n\'a pas pu être chargé. Tous les calculs, la simulation et l\'entraînement restent utilisables dans le panneau.')));
+  }
+  function init3D() {
+    if (!HAS3D) { showFallback(); return; }
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    } catch (e) { showFallback(); return; }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    vp.prepend(renderer.domElement);
+    renderer.domElement.setAttribute('aria-label', 'Vue 3D interactive');
+    camera = new THREE.PerspectiveCamera(42, 1, 0.01, 500);
+    if (THREE.OrbitControls) {
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true; controls.dampingFactor = 0.08; controls.screenSpacePanning = true;
+      controls.autoRotateSpeed = 0.8;
+    }
+    raycaster = new THREE.Raycaster();
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(vp); else window.addEventListener('resize', resize);
+    resize();
+    renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); renderer = null; showFallback('Le contexte WebGL a été perdu (mémoire graphique saturée). Rechargez la page pour retrouver la vue 3D.'); });
+    // Clic (distingué d'un glisser) et survol
+    let down = null;
+    const ndc = e => { const r = renderer.domElement.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1, px: e.clientX - r.left, py: e.clientY - r.top }; };
+    renderer.domElement.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; });
+    renderer.domElement.addEventListener('pointerup', e => {
+      if (!down) return;
+      const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y); down = null;
+      if (moved > 5 || e.button !== 0) return;
+      const v = views[S.ui.tab]; if (v && v.onClick) { const p = ndc(e); raycaster.setFromCamera(p, camera); v.onClick(raycaster, p); }
+    });
+    let hoverQueued = false;
+    renderer.domElement.addEventListener('pointermove', e => {
+      const v = views[S.ui.tab]; if (!v || !v.onHover || hoverQueued) return;
+      hoverQueued = true;
+      requestAnimationFrame(() => { hoverQueued = false; if (!renderer) return; const p = ndc(e); raycaster.setFromCamera(p, camera); v.onHover(raycaster, p); });
+    });
+    renderer.domElement.addEventListener('pointerleave', () => { const v = views[S.ui.tab]; if (v && v.onHover) v.onHover(null); });
+  }
+  function resize() {
+    if (!renderer) return;
+    const w = vp.clientWidth, h = vp.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  const hex = c => new THREE.Color(c).convertSRGBToLinear();
+  function mat(color, metal, rough, extra) { return new THREE.MeshStandardMaterial(Object.assign({ color: hex(color), metalness: metal == null ? 0.2 : metal, roughness: rough == null ? 0.6 : rough }, extra || {})); }
+  function makeScene(fogNear, fogFar) {
+    const s = new THREE.Scene();
+    s.background = hex('#1b2940');
+    if (fogFar) s.fog = new THREE.Fog(s.background.getHex(), fogNear, fogFar);
+    s.add(new THREE.HemisphereLight(0xcfe3ff, 0x1a1410, 0.9));
+    const d = new THREE.DirectionalLight(0xffffff, 1.6); d.position.set(3, 6, 4); s.add(d);
+    const r = new THREE.DirectionalLight(0x7fb8ff, 0.6); r.position.set(-5, 2, -4); s.add(r);
+    return s;
+  }
+  function dispose(obj) {
+    obj.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
+    });
+  }
+  function label(text, color, size) {
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 64;
+    const g = cv.getContext('2d');
+    g.fillStyle = 'rgba(9,14,22,.85)'; g.beginPath();
+    if (g.roundRect) g.roundRect(8, 8, 112, 48, 12); else g.rect(8, 8, 112, 48);
+    g.fill();
+    g.fillStyle = color || '#fff'; g.font = '600 30px ' + (cssv('--font-mono') || 'monospace'); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 64, 33);
+    const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
+    sp.scale.set(size * 2, size, 1); sp.renderOrder = 10;
+    return sp;
+  }
+
+  /* ---------- Hélice paramétrique (pales vrillées selon le pas) ---------- */
+  function bladeGeometry(len, chord, thick, pitch, r0) {
+    const span = len - r0;
+    const geo = new THREE.BoxGeometry(span, thick, chord, 22, 1, 4);
+    geo.translate(span / 2 + r0, 0, 0);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i); const t = (x - r0) / span;
+      const sc = t < 0.25 ? 0.6 + 1.6 * t : 1 - 0.75 * Math.pow((t - 0.25) / 0.75, 1.6);
+      const z = pos.getZ(i) * sc, y = pos.getY(i) * (1 - 0.5 * t);
+      const phi = clamp(Math.atan(pitch / (TAU * Math.max(x, r0 * 1.2))), -50 * DEG, 50 * DEG);
+      pos.setY(i, z * Math.sin(phi) + y * Math.cos(phi));
+      pos.setZ(i, z * Math.cos(phi) - y * Math.sin(phi) - 0.12 * chord * t * t);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }
+  function buildProp(c, scale, color, dir) {
+    const R = c.propD * 1.27 * scale, chord = R * 0.22, thick = chord * 0.08, P = c.propP * 2.54 * scale;
+    const hubR = Math.max(R * 0.09, 0.0035 * scale * 100);
+    const g = new THREE.Group();
+    const m = mat(color, 0.05, 0.4, { transparent: true, opacity: 0.93, side: THREE.DoubleSide });
+    const geo = bladeGeometry(R, chord, thick, P * (dir < 0 ? -1 : 1), hubR);
+    for (let b = 0; b < c.blades; b++) { const bl = new THREE.Mesh(geo, m); bl.rotation.y = b / c.blades * TAU; g.add(bl); }
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(hubR, hubR, thick * 7, 24), m));
+    return g;
+  }
+
+  /* ================= Vue 1 : moteur ================= */
+  function buildMotor(c) {
+    const W = DF.WINDINGS[c.winding];
+    const R = c.statorD / 20, H = c.statorH / 10; // centimètres
+    const g = new THREE.Group();
+    const M = { base: mat('#2a3242', 0.7, 0.45), core: mat('#5b6576', 0.85, 0.38), bell: mat(C.accent, 0.7, 0.32, { side: THREE.DoubleSide, transparent: true, opacity: 1 }), magN: mat('#d6455d', 0.25, 0.5), magS: mat('#3f6fd8', 0.25, 0.5), shaft: mat('#cfd6df', 0.95, 0.18) };
+    const baseR = R * 1.25 + 0.2, baseH = 0.25;
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(baseR, baseR * 1.04, baseH, 48), M.base); base.position.y = baseH / 2; g.add(base);
+    for (let i = 0; i < 4; i++) {
+      const ear = new THREE.Mesh(new THREE.BoxGeometry(baseR * 0.9, baseH * 0.8, baseR * 0.35), M.base);
+      ear.position.set(Math.cos(i * TAU / 4 + TAU / 8) * baseR * 0.9, baseH * 0.4, Math.sin(i * TAU / 4 + TAU / 8) * baseR * 0.9);
+      ear.rotation.y = -(i * TAU / 4 + TAU / 8); g.add(ear);
+    }
+    const stator = new THREE.Group(); stator.position.y = baseH; g.add(stator);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.4, R * 0.4, H, 32), M.core); hub.position.y = H / 2; stator.add(hub);
+    const windings = [];
+    const toothW = Math.max(0.04, TAU * R * 0.55 / W.slots * 0.42);
+    const phaseCol = [C.phasea, C.phaseb, C.phasec];
+    for (let i = 0; i < W.slots; i++) {
+      const ang = i / W.slots * TAU;
+      const t = new THREE.Group(); t.rotation.y = -ang; stator.add(t);
+      const body = new THREE.Mesh(new THREE.BoxGeometry(R * 0.52, H, toothW), M.core); body.position.set(R * 0.64, H / 2, 0); t.add(body);
+      const tip = new THREE.Mesh(new THREE.BoxGeometry(R * 0.08, H, TAU * R * 0.95 / W.slots * 0.82), M.core); tip.position.set(R * 0.94, H / 2, 0); t.add(tip);
+      const ch = W.pattern[i % W.pattern.length], ph = 'ABC'.indexOf(ch.toUpperCase());
+      const wm = new THREE.MeshStandardMaterial({ color: hex('#b87333'), metalness: 0.85, roughness: 0.35, emissive: hex(phaseCol[ph]), emissiveIntensity: 0 });
+      const coil = new THREE.Mesh(new THREE.BoxGeometry(R * 0.36, H * 1.12, toothW * 2.1), wm); coil.position.set(R * 0.66, H / 2, 0); t.add(coil);
+      windings.push({ mat: wm, phase: ph, dir: ch === ch.toUpperCase() ? 1 : -1 });
+    }
+    const gap = 0.04, magT = Math.max(0.07, R * 0.09), wall = Math.max(0.06, R * 0.06);
+    const rIn = R + gap, rOut = rIn + magT, rB = rOut + wall, bellH = H + 0.25;
+    const rotor = new THREE.Group(); rotor.position.y = baseH; g.add(rotor);
+    const bellG = new THREE.Group(); rotor.add(bellG);
+    const bellWall = new THREE.Mesh(new THREE.CylinderGeometry(rB, rB, bellH, 64, 1, true), M.bell); bellWall.position.y = bellH / 2 + 0.02; bellG.add(bellWall);
+    const bellTop = new THREE.Mesh(new THREE.CylinderGeometry(rB, rB, 0.16, 64), M.bell); bellTop.position.y = bellH + 0.1; bellG.add(bellTop);
+    const rm = (rIn + rOut) / 2, arc = TAU * rm / W.poles * 0.8;
+    for (let p = 0; p < W.poles; p++) {
+      const ang = p / W.poles * TAU;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(magT, H * 0.96, arc), p % 2 ? M.magS : M.magN);
+      m.position.set(Math.cos(ang) * rm, H / 2 + 0.02, Math.sin(ang) * rm); m.rotation.y = -ang; bellG.add(m);
+    }
+    const shaftR = c.statorD < 18 ? 0.075 : c.statorD < 35 ? 0.25 : 0.3;
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(shaftR, shaftR, bellH + 1.0, 20), M.shaft); shaft.position.y = (bellH + 1.0) / 2 - 0.1; rotor.add(shaft);
+    const propG = buildProp(c, 1, '#7fd3ff', 1); propG.position.y = bellH + 0.45;
+    const nut = new THREE.Mesh(new THREE.CylinderGeometry(shaftR * 2.2, shaftR * 2.2, 0.35, 6), M.shaft); nut.position.y = 0.25; propG.add(nut);
+    rotor.add(propG);
+    return { group: g, rotor, stator, bellG, propG, bellMats: [M.bell], windings, R, H, propR: c.propD * 1.27, bellH };
+  }
+  const MV = { parts: null, angle: 0, explode: 0, needsFit: true };
+  function setupMotorView() {
+    const scene = makeScene();
+    MV.scene = scene;
+    MV.grid = null;
+    views.motor = {
+      scene, near: 0.05, far: 600, cam: null,
+      hint: 'Orbite : clic gauche · Déplacement : clic droit · Zoom : molette',
+      legend: () => [['Aimant N', '#d6455d'], ['Aimant S', '#3f6fd8'], ['Phase A', C.phasea], ['Phase B', C.phaseb], ['Phase C', C.phasec]],
+      update: dt => {
+        if (!MV.parts) return;
+        const op = DF.operatingPoint(SUM.mp, S.ui.throttle);
+        const visRate = Math.min(op.rpm / 60 * TAU / 140, 14);
+        MV.angle += visRate * dt;
+        MV.parts.rotor.rotation.y = MV.angle;
+        const pp = DF.WINDINGS[S.cfg.winding].poles / 2;
+        const th = MV.angle * pp;
+        for (const w of MV.parts.windings) {
+          const i = Math.sin(th - w.phase * TAU / 3) * w.dir;
+          w.mat.emissiveIntensity = S.ui.phases && op.rpm > 0 ? 0.15 + 1.4 * Math.max(0, i) : 0;
+        }
+        const tgt = S.ui.explode ? 1 : 0;
+        MV.explode += (tgt - MV.explode) * Math.min(1, dt * 6);
+        const e = MV.explode, H = MV.parts.H;
+        MV.parts.rotor.position.y = 0.25 + e * (H * 1.6 + 0.6);
+        MV.parts.propG.position.y = MV.parts.bellH + 0.45 + e * (H * 1.2 + 0.8);
+        MV.parts.stator.position.y = 0.25 + e * 0.3;
+      },
+    };
+  }
+  function rebuildMotor() {
+    if (!HAS3D) return;
+    if (MV.parts) { MV.scene.remove(MV.parts.group); dispose(MV.parts.group); }
+    MV.parts = buildMotor(S.cfg);
+    MV.scene.add(MV.parts.group);
+    if (MV.grid) { MV.scene.remove(MV.grid); dispose(MV.grid); }
+    const size = Math.ceil(MV.parts.propR * 2.4 / 2) * 2;
+    MV.grid = new THREE.GridHelper(size, size, 0x2b3c56, 0x172235); MV.scene.add(MV.grid);
+    applyMotorLook();
+    if (MV.needsFit) {
+      const d = S.ui.showProp === false ? MV.parts.R * 9 : Math.max(MV.parts.R * 11, MV.parts.propR * 1.15);
+      views.motor.cam = { pos: [d * 0.62, d * 0.55, d * 0.72], target: [0, MV.parts.H * 0.8, 0] };
+      if (S.ui.tab === 'motor') applyCam(views.motor);
+      MV.needsFit = false;
+    }
+  }
+  function applyMotorLook() {
+    if (!MV.parts) return;
+    for (const m of MV.parts.bellMats) { m.opacity = S.ui.cutaway ? 0.16 : 1; m.depthWrite = !S.ui.cutaway; m.needsUpdate = true; }
+    MV.parts.propG.visible = S.ui.showProp !== false;
+  }
+
+  /* ---------- Modèle de drone complet (mètres) ---------- */
+  function buildDrone(c, opts) {
+    opts = opts || {};
+    const g = new THREE.Group();
+    const wb = c.wheelbase / 1000, L = wb / 2, a = L * Math.SQRT1_2, k = wb / 0.22;
+    const carbon = mat('#1b2130', 0.35, 0.5), carbonTop = mat('#232b3b', 0.35, 0.45);
+    const bellM = mat(C.accent, 0.7, 0.3), statorM = mat('#3a4354', 0.7, 0.4), pcb = mat('#141922', 0.2, 0.6), gold = mat('#c9a24a', 0.9, 0.3);
+    const armT = 0.0045 * Math.sqrt(k), armW = 0.013 * k;
+    const explode = [];
+    const add = (obj, dy) => { g.add(obj); if (dy != null) explode.push({ obj, base: obj.position.clone(), dy }); return obj; };
+    const bottom = new THREE.Mesh(new THREE.BoxGeometry(0.05 * k, armT, 0.11 * k), carbon); bottom.position.y = armT / 2; add(bottom, 0);
+    const pos = [[a, -a], [-a, a], [-a, -a], [a, a]];
+    const spin = [1, 1, -1, -1];
+    const props = [];
+    const rM = c.statorD / 2000 * 1.38, hM = (c.statorH + 8) / 1000;
+    pos.forEach(([x, z], i) => {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(L, armT, armW), carbon);
+      arm.position.set(x / 2, armT / 2, z / 2); arm.rotation.y = -Math.atan2(z, x); add(arm, 0);
+      const mg = new THREE.Group(); mg.position.set(x, armT, z);
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(rM * 0.95, rM, hM * 0.35, 24), statorM); st.position.y = hM * 0.175; mg.add(st);
+      const bell = new THREE.Mesh(new THREE.CylinderGeometry(rM, rM, hM * 0.65, 24), bellM); bell.position.y = hM * 0.35 + hM * 0.325; mg.add(bell);
+      add(mg, 0.03 * k);
+      const pg = new THREE.Group(); pg.position.set(x, armT + hM + 0.004, z);
+      const blades = buildProp(c, 0.01, i < 2 ? '#7fd3ff' : '#9ef0c4', spin[i]); pg.add(blades);
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(c.propD * 0.0127, 40), new THREE.MeshBasicMaterial({ color: i < 2 ? 0x7fd3ff : 0x9ef0c4, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+      disc.rotation.x = -Math.PI / 2; pg.add(disc);
+      add(pg, 0.07 * k);
+      props.push({ g: blades, disc, dir: spin[i] });
+    });
+    const sw = c.wheelbase < 180 ? 0.025 : 0.036;
+    const escB = new THREE.Mesh(new THREE.BoxGeometry(sw, 0.0018, sw), pcb); escB.position.y = armT + 0.006; add(escB, 0.012 * k);
+    const fcB = new THREE.Mesh(new THREE.BoxGeometry(sw, 0.0016, sw), mat('#0f1d16', 0.2, 0.6)); fcB.position.y = armT + 0.016; add(fcB, 0.024 * k);
+    const chip = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.0015, 0.01), mat('#2a2f38', 0.3, 0.5)); chip.position.y = armT + 0.0175; add(chip, 0.024 * k);
+    for (const [x, z] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const so = new THREE.Mesh(new THREE.CylinderGeometry(0.0025, 0.0025, 0.026, 10), gold); so.position.set(x * sw * 0.42, armT + 0.013, z * sw * 0.42); add(so, 0.03 * k);
+    }
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.045 * k, armT * 0.8, 0.095 * k), carbonTop); top.position.y = armT + 0.028; add(top, 0.04 * k);
+    const vol = SUM.bom.battMass / 1.9, bh = Math.cbrt(vol / 4.2) / 100;
+    const batt = new THREE.Group(); batt.position.y = armT + 0.03 + bh / 2;
+    batt.add(new THREE.Mesh(new THREE.BoxGeometry(bh * 1.4, bh, bh * 3), mat('#222935', 0.2, 0.7)));
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(bh * 1.42, bh * 0.28, bh * 3.02), mat(C.accent, 0.3, 0.5)); batt.add(strip);
+    add(batt, 0.065 * k);
+    if (c.video !== 'none') {
+      const cam = new THREE.Group(); cam.position.set(0, armT + 0.016, -0.05 * k);
+      cam.add(new THREE.Mesh(new THREE.BoxGeometry(0.019, 0.019, 0.016), mat('#1c2230', 0.4, 0.5)));
+      const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.0065, 0.01, 18), mat('#0a0d12', 0.6, 0.2)); lens.rotation.x = Math.PI / 2; lens.position.z = -0.012; cam.add(lens);
+      add(cam, 0.024 * k);
+    }
+    if (c.gps) {
+      const gps = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.006, 20), mat('#e6e9ee', 0.1, 0.6)); gps.position.set(0, armT + 0.045, 0.045 * k); add(gps, 0.09 * k);
+    }
+    const led = new THREE.Mesh(new THREE.BoxGeometry(0.01 * k, 0.003, 0.004), new THREE.MeshBasicMaterial({ color: hex(C.accent) })); led.position.set(0, armT, -0.055 * k); add(led, 0);
+    if (opts.scale) g.scale.setScalar(opts.scale);
+    return { group: g, props, explode };
+  }
+
+  /* ================= Vue 2 : simulation de vol ================= */
+  const SIMV = {};
+  const sim = new DF.QuadSim(SUM), ap = new DF.Autopilot(), wind = new DF.Wind(11);
+  let windVec = [0, 0, 0], simAcc = 0, simHist = [], simHistT = 0, simPaused = false;
+  const keys = {};
+  function setupSimView() {
+    const scene = makeScene(25, 70);
+    SIMV.scene = scene;
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), mat('#0e1520', 0.1, 0.95)); ground.rotation.x = -Math.PI / 2; scene.add(ground);
+    const grid = new THREE.GridHelper(24, 24, 0x2b3c56, 0x172235); grid.position.y = 0.002; scene.add(grid);
+    const border = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(24, 0.01, 24)), new THREE.LineBasicMaterial({ color: hex(C.accent), transparent: true, opacity: 0.5 })); border.position.y = 0.01; scene.add(border);
+    const pad = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.55, 48), new THREE.MeshBasicMaterial({ color: hex(C.accent), side: THREE.DoubleSide })); pad.rotation.x = -Math.PI / 2; pad.position.y = 0.004; scene.add(pad);
+    SIMV.shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 32), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.45, depthWrite: false })); SIMV.shadow.rotation.x = -Math.PI / 2; SIMV.shadow.position.y = 0.006; scene.add(SIMV.shadow);
+    SIMV.trailN = 600;
+    const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SIMV.trailN * 3), 3)); tg.setDrawRange(0, 0);
+    SIMV.trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ color: hex(C.cyan), transparent: true, opacity: 0.7 })); SIMV.trail.frustumCulled = false; scene.add(SIMV.trail);
+    SIMV.trailCount = 0; SIMV.trailT = 0;
+    SIMV.wpGroup = new THREE.Group(); scene.add(SIMV.wpGroup);
+    SIMV.windArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-10.5, 0.4, 10.5), 1.5, hex(C.warn).getHex(), 0.4, 0.25); scene.add(SIMV.windArrow);
+    SIMV.plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    views.simulation = {
+      scene, near: 0.02, far: 300, cam: { pos: [2.6, 1.8, 3.4], target: [0, 0.6, 0] },
+      hint: () => S.sim.mode === 'manual' ? 'Pilotage : ZQSD / WASD · R/F ou ↑/↓ altitude · ←/→ cap' : 'Clic au sol : déplacer le point de passage sélectionné · Orbite : clic gauche',
+      legend: () => [['Trajectoire', C.cyan], ['Point actif', C.accent], ['Vent', C.warn]],
+      update: dt => updateSimView(dt),
+      onClick: (ray) => {
+        const p = new THREE.Vector3();
+        if (!ray.ray.intersectPlane(SIMV.plane, p)) return;
+        const w = S.sim.waypoints[S.sim.sel]; if (!w) return;
+        w[0] = +clamp(p.x, -11, 11).toFixed(2); w[2] = +clamp(p.z, -11, 11).toFixed(2);
+        rebuildWaypoints(); renderWpList(); save();
+      },
+    };
+  }
+  function rebuildSimDrone() {
+    if (!HAS3D) return;
+    if (SIMV.drone) { SIMV.scene.remove(SIMV.drone.group); dispose(SIMV.drone.group); }
+    SIMV.drone = buildDrone(S.cfg);
+    SIMV.scene.add(SIMV.drone.group);
+    SIMV.shadow.scale.setScalar(S.cfg.wheelbase / 1000 * 0.9);
+  }
+  function rebuildWaypoints() {
+    if (!HAS3D) return;
+    const G = SIMV.wpGroup;
+    while (G.children.length) { const c = G.children.pop(); dispose(c); }
+    const wps = S.sim.waypoints;
+    wps.forEach((w, i) => {
+      const sel = i === S.sim.sel;
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 14), new THREE.MeshStandardMaterial({ color: hex(sel ? C.accent : C.cyan), emissive: hex(sel ? C.accent : C.cyan), emissiveIntensity: 0.5, transparent: true, opacity: 0.85 }));
+      s.position.set(w[0], w[1], w[2]); s.userData.idx = i; G.add(s);
+      const pole = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(w[0], 0, w[2]), new THREE.Vector3(w[0], w[1], w[2])]), new THREE.LineDashedMaterial({ color: hex(C.muted), dashSize: 0.15, gapSize: 0.1 }));
+      pole.computeLineDistances(); G.add(pole);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 32), new THREE.MeshBasicMaterial({ color: hex(sel ? C.accent : C.cyan), side: THREE.DoubleSide, transparent: true, opacity: 0.6 })); ring.rotation.x = -Math.PI / 2; ring.position.set(w[0], 0.005, w[2]); G.add(ring);
+      const lb = label(String(i + 1), sel ? C.accent : '#e8eef6', 0.35); lb.position.set(w[0], w[1] + 0.45, w[2]); G.add(lb);
+    });
+    if (wps.length > 1) {
+      const pts = wps.concat([wps[0]]).map(w => new THREE.Vector3(w[0], w[1], w[2]));
+      const path = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: hex(C.accent), dashSize: 0.3, gapSize: 0.2, transparent: true, opacity: 0.45 }));
+      path.computeLineDistances(); G.add(path);
+    }
+    SIMV.wpMeshes = G.children.filter(c => c.userData.idx != null);
+  }
+  function simInputs() {
+    const k = keys;
+    const ax = (p, n) => (p ? 1 : 0) - (n ? 1 : 0);
+    return {
+      mode: S.sim.mode, waypoints: S.sim.waypoints, accept: 0.5, vmax: S.sim.vmax, gains: S.sim.gains, noise: S.sim.noise, maxTilt: S.sim.maxTilt,
+      tauA: AI.agent.tauA, policy: o => AI.agent.policyMean(o),
+      manual: { fwd: ax(k.KeyW || k.KeyZ, k.KeyS), right: ax(k.KeyD, k.KeyA || k.KeyQ), up: ax(k.KeyR || k.Space || k.ArrowUp, k.KeyF || k.KeyC || k.ArrowDown || k.ShiftLeft), yaw: ax(k.ArrowLeft, k.ArrowRight) },
+    };
+  }
+  function simTick(dt) {
+    if (simPaused) return;
+    const H = 1 / 500;
+    simAcc += dt;
+    let n = 0;
+    const inp = simInputs();
+    while (simAcc >= H && n < 50) {
+      windVec = wind.step(H, S.sim.wind, S.sim.windDir, S.sim.gust);
+      const cmd = ap.step(sim, H, inp);
+      sim.step(H, cmd, windVec, S.sim.infBattery);
+      simAcc -= H; n++;
+    }
+    if (n >= 50) simAcc = 0;
+    simHistT += dt;
+    if (simHistT > 0.1) {
+      simHistT = 0;
+      simHist.push([sim.time, sim.p[1], Math.hypot(...sim.v)]);
+      if (simHist.length > 200) simHist.shift();
+    }
+  }
+  function updateSimView(dt) {
+    if (!SIMV.drone) return;
+    const d = SIMV.drone.group;
+    d.position.set(sim.p[0], sim.p[1], sim.p[2]);
+    d.quaternion.set(sim.q[1], sim.q[2], sim.q[3], sim.q[0]);
+    SIMV.drone.props.forEach((p, i) => {
+      const f = sim.T[i] / Math.max(1e-6, sim.Tmax);
+      p.g.rotation.y += p.dir * Math.min(f * 120, 45) * dt;
+      p.disc.material.opacity = clamp(f * 0.6, 0, 0.22);
+      p.g.visible = f < 0.15;
+    });
+    SIMV.shadow.position.set(sim.p[0], 0.006, sim.p[2]);
+    SIMV.shadow.material.opacity = clamp(0.5 - sim.p[1] * 0.04, 0.08, 0.5);
+    SIMV.trailT += dt;
+    if (sim.armed && SIMV.trailT > 0.05) {
+      SIMV.trailT = 0;
+      const arr = SIMV.trail.geometry.attributes.position.array;
+      if (SIMV.trailCount < SIMV.trailN) SIMV.trailCount++; else arr.copyWithin(0, 3);
+      const j = (SIMV.trailCount - 1) * 3; arr[j] = sim.p[0]; arr[j + 1] = sim.p[1]; arr[j + 2] = sim.p[2];
+      SIMV.trail.geometry.attributes.position.needsUpdate = true; SIMV.trail.geometry.setDrawRange(0, SIMV.trailCount);
+    }
+    const wv = new THREE.Vector3(windVec[0], 0, windVec[2]); const wl = wv.length();
+    SIMV.windArrow.visible = wl > 0.2;
+    if (wl > 0.2) { SIMV.windArrow.setDirection(wv.normalize()); SIMV.windArrow.setLength(0.6 + wl * 0.3, 0.35, 0.22); }
+    if (SIMV.wpMeshes) SIMV.wpMeshes.forEach(m => { const act = m.userData.idx === ap.wp % S.sim.waypoints.length && S.sim.mode !== 'manual'; m.scale.setScalar(act ? 1.35 + 0.15 * Math.sin(performance.now() / 180) : 1); });
+    if (S.sim.follow && controls) {
+      const t = new THREE.Vector3(sim.p[0], sim.p[1], sim.p[2]);
+      const delta = t.clone().sub(controls.target).multiplyScalar(Math.min(1, dt * 4));
+      controls.target.add(delta); camera.position.add(delta);
+    }
+  }
+  function resetSim() {
+    sim.configure(SUM); sim.reset(); ap.reset(); simHist = []; simAcc = 0;
+    if (SIMV.trail) { SIMV.trailCount = 0; SIMV.trail.geometry.setDrawRange(0, 0); }
+    updateBanner();
+  }
+
+  /* ================= Vue 3 : IA / PPO ================= */
+  const AI = { agent: new DF.PPOAgent(1234), stats: new DF.PPOStats(), live: {}, gen: null, running: false, trained: false, hp: null };
+  (function loadPolicy() {
+    const j = store.get(POLICY_KEY);
+    if (j && j.weights) { try { AI.agent.load(j.weights); AI.trained = true; AI.savedStats = j.stats || null; } catch (e) { store.del(POLICY_KEY); } }
+  })();
+  const AIV = { bots: [] };
+  function setupAIView() {
+    const scene = makeScene(20, 50);
+    AIV.scene = scene;
+    const grid = new THREE.GridHelper(16, 16, 0x2b3c56, 0x172235); scene.add(grid);
+    AIV.origin = new THREE.Group(); AIV.origin.position.y = 4; scene.add(AIV.origin);
+    const tgt = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.04, 12, 48), new THREE.MeshBasicMaterial({ color: hex(C.accent) })); AIV.origin.add(tgt); AIV.target = tgt;
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 12), new THREE.MeshBasicMaterial({ color: hex(C.accent) })); AIV.origin.add(core);
+    const beam = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -4, 0), new THREE.Vector3(0, 0, 0)]), new THREE.LineDashedMaterial({ color: hex(C.accent), dashSize: 0.2, gapSize: 0.15 })); beam.computeLineDistances(); AIV.origin.add(beam);
+    for (let i = 0; i < 16; i++) {
+      const col = new THREE.Color().setHSL(0.52 + i / 16 * 0.35, 0.7, 0.62);
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 10), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.4 }));
+      AIV.origin.add(b);
+      const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(30 * 3), 3));
+      const tr = new THREE.Line(tg, new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.55 })); tr.frustumCulled = false; AIV.origin.add(tr);
+      AIV.bots.push({ b, tr });
+    }
+    views.ai = {
+      scene, near: 0.05, far: 200, cam: { pos: [7, 7, 9], target: [0, 4, 0] },
+      hint: '16 environnements en parallèle : chaque sphère apprend à rejoindre la cible orange',
+      legend: () => [['Cible', C.accent], ['Agents (16 environnements)', C.cyan]],
+      update: dt => {
+        AIV.target.rotation.x += dt * 0.6; AIV.target.rotation.y += dt * 0.9;
+        const envs = AI.live.envs;
+        AIV.bots.forEach((o, i) => {
+          const e = envs && envs[i];
+          o.b.visible = o.tr.visible = !!e;
+          if (!e) return;
+          o.b.position.set(e.p[0], e.p[1], e.p[2]);
+          const arr = o.tr.geometry.attributes.position.array, t = e.trail;
+          for (let j = 0; j < t.length; j++) { arr[j * 3] = t[j][0]; arr[j * 3 + 1] = t[j][1]; arr[j * 3 + 2] = t[j][2]; }
+          o.tr.geometry.setDrawRange(0, t.length); o.tr.geometry.attributes.position.needsUpdate = true;
+        });
+      },
+    };
+  }
+  // Démo hors entraînement : la politique actuelle pilote les 16 agents
+  const demo = { envs: null, rng: DF.mulberry32(5), t: 0 };
+  function demoTick(dt) {
+    if (AI.running) return;
+    if (!demo.envs) { demo.envs = Array.from({ length: 16 }, () => new DF.NavEnv(demo.rng, AI.agent.tauA)); AI.live.envs = demo.envs; }
+    demo.t += dt;
+    while (demo.t >= DF.NAV.DT) {
+      demo.t -= DF.NAV.DT;
+      for (const e of demo.envs) {
+        const r = e.step(AI.agent.policyMean(e.obs()));
+        e.trail.push([e.p[0], e.p[1], e.p[2]]); if (e.trail.length > 30) e.trail.shift();
+        if (r.done) e.reset();
+      }
+    }
+  }
+  function startTraining() {
+    if (AI.running) return;
+    if (!AI.gen) { AI.hp = Object.assign({}, S.ai, { tauA: DF.responseTau(SUM, S.sim.gains) }); AI.gen = DF.ppoTrainer(AI.agent, AI.hp, AI.stats, AI.live, (Date.now() & 0xffff) + 1); }
+    AI.running = true; demo.envs = null;
+    $('#tabbtn-ai').classList.add('busy');
+    renderAIControls();
+  }
+  function pauseTraining() { AI.running = false; $('#tabbtn-ai').classList.remove('busy'); demo.envs = null; renderAIControls(); persistPolicy(); }
+  function resetTraining() {
+    AI.running = false; AI.gen = null; AI.agent = new DF.PPOAgent((Date.now() & 0xffff) + 7); AI.stats = new DF.PPOStats(); AI.live = {}; AI.trained = false; AI.savedStats = null; demo.envs = null;
+    store.del(POLICY_KEY); $('#tabbtn-ai').classList.remove('busy');
+    renderAIControls(); updateAIPanel(true); toast('Réseau réinitialisé');
+  }
+  function persistPolicy() { if (AI.stats.updates || AI.trained) store.set(POLICY_KEY, { weights: AI.agent.toJSON(), stats: { updates: AI.stats.updates || (AI.savedStats && AI.savedStats.updates) || 0, ok: AI.stats.successRate() } }); }
+  function pumpTraining() {
+    if (!AI.running || !AI.gen) return;
+    if (AI.hp) Object.assign(AI.hp, S.ai);
+    const end = performance.now() + (S.ui.tab === 'ai' ? 11 : 6);
+    while (performance.now() < end) {
+      const r = AI.gen.next();
+      if (r.value === 2) {
+        if (!AI.trained) { AI.trained = true; renderAIControls(); updateSimMode(); }
+        if (AI.stats.updates % 5 === 0) persistPolicy();
+      }
+    }
+  }
+
+  /* ================= Vue 4 : carte mère ================= */
+  const BV = { meshes: [], hovered: null, pulses: [] };
+  function boardComponents(c) {
+    const mcu = DF.MCU[c.mcu];
+    const L = [
+      { id: 'mcu', short: 'MCU', board: 'fc', label: `Microcontrôleur ${mcu.label}`, role: 'Exécute le firmware : fusion capteurs, boucle PID, mixage moteurs, OSD.', bus: `Cœur ARM Cortex-M, ${mcu.flashKB} Ko de flash`, power: `${mcu.mA} mA sous 3,3 V`, size: [mcu.size, 1.4, mcu.size], at: [-1, -1], color: '#2b313c', pins: true },
+      { id: 'imu', short: 'IMU', board: 'fc', label: `Centrale inertielle ${c.imu}`, role: 'Gyroscope et accéléromètre 3 axes : mesure la rotation à chaque cycle de la boucle.', bus: `SPI 24 MHz, gyro jusqu'à ${fmtN(DF.IMU[c.imu].gyroKHz, 1)} kHz`, power: '1 mA sous 3,3 V', size: [3, 0.9, 3], at: [9, 8], color: '#3a414d' },
+      { id: 'baro', short: 'Baromètre', board: 'fc', label: 'Baromètre DPS310', role: 'Mesure la pression pour le maintien d\'altitude.', bus: 'I²C 400 kHz', power: '0,5 mA', size: [2.5, 0.9, 2], at: [-10, 9], color: '#c7c9cc' },
+      { id: 'flash', short: 'Blackbox', board: 'fc', label: 'Mémoire flash 16 Mo', role: 'Enregistre la blackbox (gyro, consignes, moteurs) pour le réglage des filtres.', bus: 'SPI', power: '15 mA en écriture', size: [8, 1, 6], at: [-9, -9], color: '#24292f' },
+      { id: 'bec5', short: 'BEC 5 V', board: 'fc', label: 'Régulateur 5 V / 2 A', role: 'Alimente le récepteur, la caméra et le GPS depuis la batterie.', bus: 'Convertisseur abaisseur', power: `${SUM.elec.rails['5V'].mA} mA demandés`, size: [3, 1, 3], at: [13, 1], color: '#2b313c' },
+      { id: 'ind5', short: 'Self 5 V', board: 'fc', label: 'Inductance 5 V', role: 'Stocke l\'énergie du convertisseur 5 V.', bus: '—', power: '—', size: [4, 2, 4], at: [13, -4], color: '#3b3f46' },
+      { id: 'bec10', short: 'BEC 10 V', board: 'fc', label: 'Régulateur 10 V / 2 A', role: 'Alimente l\'émetteur vidéo avec une tension propre.', bus: 'Convertisseur abaisseur', power: `${SUM.elec.rails['10V'].mA} mA demandés`, size: [3, 1, 3], at: [-13, 1], color: '#2b313c' },
+      { id: 'ind10', short: 'Self 10 V', board: 'fc', label: 'Inductance 10 V', role: 'Stocke l\'énergie du convertisseur 10 V.', bus: '—', power: '—', size: [4, 2, 4], at: [-13, -4], color: '#3b3f46' },
+      { id: 'xtal', short: 'Quartz', board: 'fc', label: 'Quartz 8 MHz', role: 'Horloge de référence du microcontrôleur.', bus: '—', power: '—', size: [3.2, 0.8, 2.5], at: [5, -10], color: '#d6d9de' },
+      { id: 'usb', short: 'USB-C', board: 'fc', label: 'Connecteur USB-C', role: 'Configuration et flash du firmware.', bus: 'USB 2.0 Full Speed', power: '—', size: [9, 3.2, 3.6], at: [0, 16], color: '#c8ccd3', metal: true },
+      { id: 'jesc', short: 'Prise ESC', board: 'fc', label: 'Connecteur ESC 8 broches', role: 'Signaux DShot des 4 moteurs, télémétrie, mesure de courant et tension.', bus: 'DShot600 bidirectionnel', power: '—', size: [9, 4, 3], at: [0, -15.5], color: '#e9e4d6' },
+      { id: 'jrx', short: 'Prise RX', board: 'fc', label: 'Connecteur récepteur', role: 'Liaison radio ExpressLRS.', bus: 'UART CRSF 420 kbit/s', power: '110 mA sous 5 V', size: [5, 4, 3], at: [-13, 14.5], color: '#e9e4d6' },
+      { id: 'led', short: 'LED', board: 'fc', label: 'LED d\'état', role: 'Indique l\'armement et les erreurs.', bus: 'GPIO', power: '2 mA', size: [1.6, 0.6, 0.8], at: [6, 12.5], color: C.good, glow: true },
+      { id: 'boot', short: 'BOOT', board: 'fc', label: 'Bouton BOOT', role: 'Force le mode DFU pour réinstaller le firmware.', bus: 'GPIO', power: '—', size: [3, 1.2, 2], at: [-5, 12.5], color: '#cfd3da' },
+    ];
+    if (c.video === 'analog') L.push({ id: 'osd', short: 'OSD', board: 'fc', label: 'Puce OSD AT7456E', role: 'Incruste la télémétrie dans l\'image analogique.', bus: 'SPI', power: '25 mA', size: [7, 1.2, 7], at: [9, -2], color: '#24292f' });
+    if (c.video !== 'none') L.push({ id: 'jvtx', short: 'Prise vidéo', board: 'fc', label: 'Connecteur vidéo', role: c.video === 'hd' ? 'Liaison avec le système vidéo HD (OSD MSP).' : 'Caméra et émetteur vidéo, contrôle SmartAudio.', bus: c.video === 'hd' ? 'UART MSP DisplayPort' : 'Vidéo composite + UART', power: c.video === 'hd' ? '9 W sur la batterie' : '330 mA sous 10 V', size: [6.5, 4, 3], at: [13, 14.5], color: '#e9e4d6' });
+    if (c.gps) L.push({ id: 'jgps', short: 'Prise GPS', board: 'fc', label: 'Connecteur GPS', role: 'Module GNSS et compas.', bus: 'UART + I²C', power: '55 mA sous 5 V', size: [5, 4, 3], at: [-13, -15], color: '#e9e4d6' });
+    // Carte ESC 4-en-1
+    const esc = DF.ESC[c.esc];
+    [[1, -1], [-1, 1], [-1, -1], [1, 1]].forEach(([sx, sz], m) => {
+      for (let i = 0; i < 6; i++) {
+        L.push({ id: `fet-${m}-${i}`, short: 'MOSFET', group: 'fet', board: 'esc', label: `MOSFET moteur ${m + 1}`, role: 'Demi-pont de puissance : commute une phase du moteur entre + et − batterie.', bus: '3 phases × 2 transistors par moteur', power: `${c.esc} A continus par moteur`, size: [3.3, 1, 3.3], at: [sx * (7 + (i % 3) * 3.7), sz * (8.5 + Math.floor(i / 3) * 4.2)], color: '#1e2228' });
+      }
+      L.push({ id: `escmcu-${m}`, short: 'MCU ESC', group: 'escmcu', board: 'esc', label: `Contrôleur ESC moteur ${m + 1}`, role: 'Génère la commutation des phases à partir de la consigne DShot.', bus: 'Firmware AM32 / BLHeli_32', power: '15 mA', size: [4, 0.9, 4], at: [sx * 3, sz * 4], color: '#2b313c' });
+    });
+    L.push({ id: 'shunt', short: 'Shunt', board: 'esc', label: 'Shunt de mesure de courant', role: 'Mesure le courant total consommé.', bus: 'Analogique vers le contrôleur de vol', power: `${Math.round(SUM.full.Ibat * 4)} A en pointe`, size: [6, 0.6, 3], at: [0, 0], color: '#c9a24a', metal: true });
+    L.push({ id: 'cap', short: 'Condensateur', board: 'esc', label: `Condensateur 1000 µF ${S.cfg.cells >= 5 ? 50 : 35} V`, role: 'Absorbe les pics de tension générés par la commutation des moteurs.', bus: '—', power: '—', cap: true, at: [0, 26], color: '#2d3442' });
+    L.push({ id: 'escinfo', short: 'ESC', board: 'esc', label: `ESC 4-en-1 ${c.esc} A`, role: `Convertit la batterie ${c.cells}S en trois phases pour chaque moteur.`, bus: `${esc.maxS}S maximum`, power: `${c.esc} A par moteur`, hidden: true });
+    return L;
+  }
+  function buildBoard(c) {
+    const g = new THREE.Group();
+    const shape = new THREE.Shape();
+    const s = 18, r = 3;
+    shape.moveTo(-s + r, -s); shape.lineTo(s - r, -s); shape.quadraticCurveTo(s, -s, s, -s + r); shape.lineTo(s, s - r); shape.quadraticCurveTo(s, s, s - r, s); shape.lineTo(-s + r, s); shape.quadraticCurveTo(-s, s, -s, s - r); shape.lineTo(-s, -s + r); shape.quadraticCurveTo(-s, -s, -s + r, -s);
+    for (const [x, z] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) { const h = new THREE.Path(); h.absarc(x * 15.25, z * 15.25, 1.6, 0, TAU, true); shape.holes.push(h); }
+    const pcbGeo = new THREE.ExtrudeGeometry(shape, { depth: 1.6, bevelEnabled: false, curveSegments: 16 });
+    pcbGeo.rotateX(-Math.PI / 2);
+    const fc = new THREE.Group(), esc = new THREE.Group();
+    fc.add(new THREE.Mesh(pcbGeo, mat('#0f1a14', 0.25, 0.55)));
+    esc.add(new THREE.Mesh(pcbGeo.clone(), mat('#111823', 0.25, 0.55)));
+    const gold = mat('#c9a24a', 0.95, 0.28);
+    for (const grp of [fc, esc]) for (const [x, z] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const ring = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.6, 24), gold); ring.rotation.x = -Math.PI / 2; ring.position.set(x * 15.25, 1.62, z * 15.25); grp.add(ring);
+    }
+    // Pads moteurs et batterie sur l'ESC
+    [[1, -1], [-1, 1], [-1, -1], [1, 1]].forEach(([sx, sz]) => { for (let i = 0; i < 3; i++) { const p = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.15, 3.2), gold); p.position.set(sx * 16.4, 1.65, sz * (4 + i * 3.6)); esc.add(p); } });
+    for (const x of [-4, 4]) { const p = new THREE.Mesh(new THREE.BoxGeometry(5, 0.2, 4), gold); p.position.set(x, 1.68, 15); esc.add(p); }
+    fc.position.y = 10; g.add(fc, esc);
+    // Entretoises et silent-blocs
+    const standMat = mat('#c9a24a', 0.9, 0.3), grom = mat('#3a2a26', 0.1, 0.8);
+    const stands = [];
+    for (const [x, z] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 8.4, 16), standMat); st.position.set(x * 15.25, 5.8, z * 15.25); g.add(st); stands.push(st);
+      const gr = new THREE.Mesh(new THREE.TorusGeometry(1.9, 0.6, 10, 24), grom); gr.rotation.x = Math.PI / 2; gr.position.set(x * 15.25, 11.9, z * 15.25); g.add(gr); stands.push(gr);
+    }
+    const comps = boardComponents(c), meshes = [];
+    for (const cp of comps) {
+      if (cp.hidden) continue;
+      const parent = cp.board === 'fc' ? fc : esc;
+      let m;
+      if (cp.cap) {
+        m = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 16, 28), mat(cp.color, 0.4, 0.4));
+        m.rotation.x = Math.PI / 2; m.position.set(0, 5, cp.at[1]);
+        const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(5.05, 5.05, 3, 28), mat(C.accent, 0.3, 0.5)); sleeve.position.y = 6; m.add(sleeve);
+      } else {
+        m = new THREE.Mesh(new THREE.BoxGeometry(cp.size[0], cp.size[1], cp.size[2]), cp.glow ? new THREE.MeshStandardMaterial({ color: hex(cp.color), emissive: hex(cp.color), emissiveIntensity: 1.2 }) : mat(cp.color, cp.metal ? 0.9 : 0.25, cp.metal ? 0.3 : 0.55));
+        m.position.set(cp.at[0], 1.6 + cp.size[1] / 2, cp.at[1]);
+        if (cp.pins) {
+          const pinM = mat('#b9c0c9', 0.95, 0.25), n = 16, sz = cp.size[0];
+          for (let side = 0; side < 4; side++) for (let i = 0; i < n; i++) {
+            const pin = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.2, 1.1), pinM);
+            const off = -sz / 2 + (i + 0.5) * sz / n;
+            if (side === 0) pin.position.set(off, -0.6, sz / 2 + 0.5); else if (side === 1) pin.position.set(off, -0.6, -sz / 2 - 0.5);
+            else { pin.rotation.y = Math.PI / 2; pin.position.set(side === 2 ? sz / 2 + 0.5 : -sz / 2 - 0.5, -0.6, off); }
+            m.add(pin);
+          }
+          const dot = new THREE.Mesh(new THREE.CircleGeometry(0.5, 12), mat('#4b5260')); dot.rotation.x = -Math.PI / 2; dot.position.set(-sz / 2 + 1.2, 0.71, -sz / 2 + 1.2); m.add(dot);
+        }
+      }
+      m.userData.comp = cp; m.userData.baseEmissive = m.material.emissive ? m.material.emissive.clone() : null;
+      parent.add(m); meshes.push(m);
+    }
+    // Liaisons de signaux (impulsions animées)
+    const at = id => { const cp = comps.find(x => x.id === id); return cp ? new THREE.Vector3(cp.at[0], cp.board === 'fc' ? 13 : 3, cp.at[1]) : null; };
+    const links = [['imu', 'mcu', C.cyan, 'SPI'], ['baro', 'mcu', C.good, 'I²C'], ['flash', 'mcu', C.cyan, 'SPI'], ['jrx', 'mcu', C.phasec, 'UART'], ['mcu', 'jesc', C.accent, 'DShot'], ['jvtx', 'mcu', C.phasec, 'UART'], ['jgps', 'mcu', C.phasec, 'UART'], ['osd', 'mcu', C.cyan, 'SPI'], ['usb', 'mcu', C.warn, 'USB']];
+    const signals = new THREE.Group(); fc.add(signals);
+    const pulses = [];
+    for (const [a, b, col] of links) {
+      const A = at(a), B = at(b); if (!A || !B) continue;
+      A.y = 1.75; B.y = 1.75;
+      const mid = A.clone().lerp(B, 0.5); mid.y = 4.5;
+      const curve = new THREE.QuadraticBezierCurve3(A, mid, B);
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(30)), new THREE.LineBasicMaterial({ color: hex(col), transparent: true, opacity: 0.5 }));
+      signals.add(line);
+      for (let k = 0; k < 2; k++) { const p = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), new THREE.MeshBasicMaterial({ color: hex(col) })); signals.add(p); pulses.push({ p, curve, t: k / 2 + Math.random() * 0.1, speed: a === 'imu' || b === 'jesc' ? 0.9 : 0.4 }); }
+    }
+    // Liaison DShot vers l'ESC : suit l'écartement de la pile
+    const ds = new THREE.Group(); g.add(ds);
+    const dsLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0)]), new THREE.LineBasicMaterial({ color: hex(C.accent), transparent: true, opacity: 0.5 }));
+    dsLine.position.set(0, 1.7, -15.5); ds.add(dsLine);
+    const dsP = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), new THREE.MeshBasicMaterial({ color: hex(C.accent) })); ds.add(dsP);
+    return { group: g, fc, esc, stands, meshes, comps, signals, pulses, ds: { g: ds, line: dsLine, p: dsP, t: 0 } };
+  }
+  function setupBoardView() {
+    const scene = makeScene();
+    BV.scene = scene;
+    const grid = new THREE.GridHelper(80, 16, 0x2b3c56, 0x172235); grid.position.y = -0.2; scene.add(grid);
+    BV.explode = 0;
+    views.motherboard = {
+      scene, near: 0.5, far: 2000, cam: { pos: [42, 48, 54], target: [0, 6, 0] },
+      hint: 'Survolez ou cliquez un composant pour l\'identifier',
+      legend: () => [['SPI', C.cyan], ['I²C', C.good], ['UART', C.phasec], ['DShot', C.accent], ['USB', C.warn]],
+      update: dt => {
+        if (!BV.parts) return;
+        const tgt = S.ui.boardExplode ? 1 : 0;
+        BV.explode += (tgt - BV.explode) * Math.min(1, dt * 5);
+        BV.parts.fc.position.y = 10 + BV.explode * 16;
+        BV.parts.stands.forEach(s => { s.visible = BV.explode < 0.5; });
+        BV.parts.signals.visible = BV.parts.ds.g.visible = S.ui.signals;
+        if (S.ui.signals) {
+          for (const p of BV.parts.pulses) { p.t = (p.t + dt * p.speed) % 1; p.p.position.copy(p.curve.getPoint(p.t)); }
+          const ds = BV.parts.ds, top = BV.parts.fc.position.y + 1.75;
+          ds.line.scale.y = top - 1.7; ds.t = (ds.t + dt * 0.9) % 1;
+          ds.p.position.set(0, top - (top - 1.7) * ds.t, -15.5);
+        }
+      },
+      onHover: (ray, p) => {
+        const tip = $('#vp-tip');
+        const hit = ray ? ray.intersectObjects(BV.parts ? BV.parts.meshes : [], false)[0] : null;
+        setHover(hit ? hit.object : null);
+        if (hit) { const cp = hit.object.userData.comp; tip.replaceChildren(el('b', null, cp.label), el('span', null, cp.bus)); tip.style.left = p.px + 'px'; tip.style.top = p.py + 'px'; tip.hidden = false; renderer.domElement.style.cursor = 'pointer'; }
+        else { tip.hidden = true; if (renderer) renderer.domElement.style.cursor = ''; }
+      },
+      onClick: ray => {
+        const hit = ray.intersectObjects(BV.parts ? BV.parts.meshes : [], false)[0];
+        if (hit) { const cp = hit.object.userData.comp; S.board.selected = cp.group || cp.id; save(); renderBoardInfo(); highlightSelected(); }
+      },
+    };
+  }
+  function setHover(m) {
+    if (BV.hovered === m) return;
+    const restore = x => { if (x && x.material.emissive) { const sel = isSelected(x); x.material.emissive.copy(sel ? hex(C.accent) : x.userData.baseEmissive); x.material.emissiveIntensity = sel ? 0.35 : (x.userData.comp.glow ? 1.2 : 1); } };
+    restore(BV.hovered);
+    BV.hovered = m;
+    if (m && m.material.emissive) { m.material.emissive.set(hex(C.cyan)); m.material.emissiveIntensity = 0.45; }
+  }
+  const isSelected = m => { const cp = m.userData.comp; return (cp.group || cp.id) === S.board.selected; };
+  function highlightSelected() {
+    if (!BV.parts) return;
+    for (const m of BV.parts.meshes) {
+      if (!m.material.emissive) continue;
+      const sel = isSelected(m);
+      m.material.emissive.copy(sel ? hex(C.accent) : m.userData.baseEmissive);
+      m.material.emissiveIntensity = sel ? 0.35 : (m.userData.comp.glow ? 1.2 : 1);
+    }
+  }
+  function rebuildBoard() {
+    if (!HAS3D) return;
+    if (BV.parts) { BV.scene.remove(BV.parts.group); dispose(BV.parts.group); BV.hovered = null; }
+    BV.parts = buildBoard(S.cfg);
+    BV.scene.add(BV.parts.group);
+    highlightSelected();
+  }
+
+  /* ================= Vue 5 : production ================= */
+  const PV = {};
+  function setupProdView() {
+    const scene = makeScene();
+    PV.scene = scene;
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(1, 64), mat('#111a27', 0.2, 0.9)); disc.rotation.x = -Math.PI / 2; disc.position.y = -0.001; scene.add(disc); PV.disc = disc;
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.98, 1, 96), new THREE.MeshBasicMaterial({ color: hex(C.accent), side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; scene.add(ring); PV.ring = ring;
+    PV.ex = 0;
+    views.production = {
+      scene, near: 0.005, far: 50, cam: null,
+      hint: 'Vue éclatée réglable dans le panneau · Orbite : clic gauche',
+      legend: () => [],
+      update: dt => {
+        if (!PV.drone) return;
+        PV.ex += (S.ui.prodExplode - PV.ex) * Math.min(1, dt * 6);
+        for (const e of PV.drone.explode) e.obj.position.y = e.base.y + e.dy * PV.ex * 2.2;
+        PV.drone.props.forEach(p => { p.g.visible = true; p.disc.material.opacity = 0; });
+        if (controls) controls.autoRotate = S.ui.autoRotate && S.ui.tab === 'production';
+      },
+    };
+  }
+  function rebuildProdDrone() {
+    if (!HAS3D) return;
+    if (PV.drone) { PV.scene.remove(PV.drone.group); dispose(PV.drone.group); }
+    PV.drone = buildDrone(S.cfg);
+    PV.scene.add(PV.drone.group);
+    const wb = S.cfg.wheelbase / 1000;
+    const r = wb * 0.5 + S.cfg.propD * 0.0127 + 0.02;
+    PV.disc.scale.setScalar(r * 1.15); PV.ring.scale.setScalar(r * 1.15);
+    const d = r * 3.2;
+    const fresh = { pos: [d * 0.7, d * 0.6, d * 0.8], target: [0, wb * 0.12, 0] };
+    if (!views.production.cam || PV.lastWb !== S.cfg.wheelbase) { views.production.cam = fresh; if (S.ui.tab === 'production') applyCam(views.production); }
+    PV.lastWb = S.cfg.wheelbase;
+  }
+
+  /* ================= Caméra par onglet ================= */
+  function applyCam(v) {
+    if (!camera || !v || !v.cam) return;
+    camera.near = v.near; camera.far = v.far; camera.updateProjectionMatrix();
+    camera.position.fromArray(v.cam.pos);
+    if (controls) { controls.target.fromArray(v.cam.target); controls.update(); } else camera.lookAt(new THREE.Vector3().fromArray(v.cam.target));
+  }
+  function storeCam(v) { if (camera && v) v.cam = { pos: camera.position.toArray(), target: controls ? controls.target.toArray() : v.cam.target }; }
+
+  /* ================= En-tête ================= */
+  function updateHeader() {
+    const c = S.cfg;
+    $('#header-preset-name').textContent = c.preset !== 'custom' && DF.PRESETS[c.preset] ? DF.PRESETS[c.preset].label : `Personnalisé ${SUM.designation}`;
+    $('#header-kv').textContent = `${SUM.designation} · ${fmtN(c.kv)} Kv`;
+    $('#header-thrust').textContent = `${fmtN(SUM.thrustMaxG)} g`;
+    const twr = $('#header-twr');
+    twr.textContent = `${fmtN(SUM.twr, 1)} : 1 · ${fmtN(SUM.auwG)} g`;
+    twr.style.color = SUM.twr < 1.4 ? C.bad : SUM.twr < 2 ? C.warn : C.fg;
+    $('#header-voltage').textContent = `${fmtN(c.cells * 3.7, 1)} V (${c.cells}S) · ${fmtN(c.capacity)} mAh`;
+  }
+
+  /* ================= Panneau 1 : moteur ================= */
+  const MP = {};
+  function buildMotorPanel() {
+    const root = $('#tab-motor');
+    const c = S.cfg;
+    const markCustom = () => { if (S.cfg.preset !== 'custom') { S.cfg.preset = 'custom'; MP.preset.set('custom'); } };
+    const p = (key, label, min, max, step, fmt, scope) => range({ id: 'm-' + key, label, min, max, step, value: c[key], fmt, onInput: v => { S.cfg[key] = v; markCustom(); changed(scope || 'motor'); } });
+    MP.preset = select({ id: 'm-preset', label: 'Préréglage', value: c.preset, options: Object.entries(DF.PRESETS).map(([k, v]) => [k, v.label]).concat([['custom', 'Personnalisé']]), onChange: v => { if (v === 'custom') return; DF.applyPreset(S.cfg, v); MV.needsFit = true; syncMotorControls(); changed('all'); toast(`Préréglage « ${DF.PRESETS[v].label} » chargé`); } });
+    MP.ctl = {
+      statorD: p('statorD', 'Diamètre du stator', 10, 50, 1, v => `${v} mm`),
+      statorH: p('statorH', 'Hauteur du stator', 3, 20, 0.5, v => `${fmtN(v, 1)} mm`),
+      kv: p('kv', 'Constante Kv', 150, 6000, 10, v => `${fmtN(v)} tr/min/V`),
+      propD: p('propD', 'Diamètre d\'hélice', 2, 18, 0.1, v => `${fmtN(v, 1)} po · ${Math.round(v * 25.4)} mm`),
+      propP: p('propP', 'Pas d\'hélice', 1, 10, 0.1, v => `${fmtN(v, 1)} po`),
+      blades: p('blades', 'Nombre de pales', 2, 5, 1, v => `${v}`),
+      cells: p('cells', 'Cellules LiPo', 2, 8, 1, v => `${v}S · ${fmtN(v * 3.7, 1)} V`, 'all'),
+      capacity: p('capacity', 'Capacité', 300, 16000, 50, v => `${fmtN(v)} mAh`, 'all'),
+      wheelbase: p('wheelbase', 'Empattement du châssis', 80, 1000, 5, v => `${v} mm`, 'all'),
+      frameMass: p('frameMass', 'Masse du châssis', 15, 2000, 5, v => `${v} g`, 'all'),
+    };
+    MP.winding = select({ id: 'm-winding', label: 'Bobinage', value: c.winding, options: Object.keys(DF.WINDINGS).map(k => [k, `${k} (${DF.WINDINGS[k].slots} encoches, ${DF.WINDINGS[k].poles} aimants)`]), onChange: v => { S.cfg.winding = v; markCustom(); changed('motor'); } });
+    MP.kpis = kpiGrid([
+      { id: 'rpm', label: 'Régime', unit: 'tr/min' }, { id: 'thrust', label: 'Poussée / moteur', unit: 'g' },
+      { id: 'cur', label: 'Courant moteur', unit: 'A' }, { id: 'pow', label: 'Puissance élec.', unit: 'W' },
+      { id: 'gw', label: 'Rendement', unit: 'g/W' }, { id: 'eff', label: 'Rendement moteur', unit: '%' },
+      { id: 'temp', label: 'Température régime', unit: '°C' }, { id: 'tip', label: 'Bout de pale', unit: 'Mach' },
+    ]);
+    MP.sumK = kpiGrid([
+      { id: 'auw', label: 'Masse au décollage', unit: 'g' }, { id: 'twr', label: 'Poussée / poids', unit: ': 1' },
+      { id: 'hover', label: 'Gaz stationnaire', unit: '%' }, { id: 'time', label: 'Autonomie stat.', unit: 'min' },
+    ]);
+    MP.chart = el('canvas', { class: 'chart', role: 'img', 'aria-label': 'Courbes de poussée et de courant selon les gaz' });
+    MP.checks = el('ul', { class: 'checks' });
+    MP.throttle = range({ id: 'm-throttle', label: 'Gaz appliqués', min: 0, max: 1, step: 0.01, value: S.ui.throttle, fmt: v => `${Math.round(v * 100)} %`, onInput: v => { S.ui.throttle = v; save(); updateMotorPanel(); } });
+    root.append(
+      head('Atelier moteur', 'Dimensionnez moteur, hélice et batterie. Le point de fonctionnement est calculé par équilibre entre le couple moteur et le couple résistant de l\'hélice.'),
+      sec('Configuration', null, MP.preset),
+      sec('Banc d\'essai', null, MP.throttle, MP.kpis, MP.chart,
+        el('div', { class: 'legend-row' }, el('span', null, el('i', { style: `background:${C.good}` }), 'Poussée par moteur (g)'), el('span', null, el('i', { style: `background:${C.warn}` }), 'Courant batterie (A)'), el('span', null, el('i', { style: `background:${C.accent}` }), 'Gaz appliqués'))),
+      sec('Bilan du drone', null, MP.sumK, MP.checks),
+      sec('Stator & bobinage', null, MP.ctl.statorD, MP.ctl.statorH, MP.ctl.kv, MP.winding),
+      sec('Hélice', null, MP.ctl.propD, MP.ctl.propP, MP.ctl.blades),
+      sec('Batterie & châssis', null, MP.ctl.cells, MP.ctl.capacity, MP.ctl.wheelbase, MP.ctl.frameMass),
+      sec('Affichage 3D', null,
+        toggle({ id: 'm-explode', label: 'Vue éclatée', checked: S.ui.explode, onChange: v => { S.ui.explode = v; save(); } }),
+        toggle({ id: 'm-prop', label: 'Afficher l\'hélice', checked: S.ui.showProp !== false, onChange: v => { S.ui.showProp = v; applyMotorLook(); save(); } }),
+        toggle({ id: 'm-cutaway', label: 'Cloche transparente (coupe)', checked: S.ui.cutaway, onChange: v => { S.ui.cutaway = v; applyMotorLook(); save(); } }),
+        toggle({ id: 'm-phases', label: 'Commutation des phases animée', checked: S.ui.phases, onChange: v => { S.ui.phases = v; save(); } }),
+        el('p', { class: 'note' }, 'La rotation est ralentie environ 140 fois pour rester lisible. Les bobines s\'allument selon le courant de leur phase, synchronisé sur l\'angle électrique du rotor.')),
+    );
+  }
+  function syncMotorControls() {
+    for (const k in MP.ctl) MP.ctl[k].set(S.cfg[k]);
+    MP.winding.set(S.cfg.winding); MP.preset.set(S.cfg.preset);
+    if (BP.sel) { BP.sel.mcu.set(S.cfg.mcu); BP.sel.imu.set(S.cfg.imu); BP.sel.esc.set(S.cfg.esc); BP.sel.fw.set(S.cfg.firmware); BP.sel.video.set(S.cfg.video); BP.sel.gps.set(S.cfg.gps); }
+  }
+  function updateMotorPanel() {
+    const op = DF.operatingPoint(SUM.mp, S.ui.throttle);
+    const K = MP.kpis;
+    K.setK('rpm', fmtN(op.rpm));
+    K.setK('thrust', fmtN(op.thrustG));
+    K.setK('cur', fmtN(op.Im, 1), op.Im > S.cfg.esc ? 'bad' : op.Im > S.cfg.esc * 0.85 ? 'warn' : '');
+    K.setK('pow', fmtN(op.Pel));
+    K.setK('gw', fmtN(op.gw, 2));
+    K.setK('eff', fmtN(op.eff * 100));
+    K.setK('temp', fmtN(op.temp), op.temp > 110 ? 'bad' : op.temp > 90 ? 'warn' : '');
+    K.setK('tip', fmtN(op.tip, 2), op.tip > 0.75 ? 'bad' : op.tip > 0.62 ? 'warn' : '');
+    const s = MP.sumK;
+    s.setK('auw', fmtN(SUM.auwG));
+    s.setK('twr', fmtN(SUM.twr, 1), SUM.twr < 1.4 ? 'bad' : SUM.twr < 2 ? 'warn' : 'good');
+    s.setK('hover', SUM.hover ? fmtN(SUM.hover.throttle * 100) : '—', SUM.hover && SUM.hover.throttle > 0.7 ? 'warn' : '');
+    s.setK('time', SUM.hover ? fmtN(SUM.flightMin, 1) : '—');
+    renderChecks(MP.checks, DF.motorChecks(SUM));
+    const thr = [], cur = [];
+    for (let i = 0; i <= 40; i++) { const o = DF.operatingPoint(SUM.mp, i / 40); thr.push([i / 40 * 100, o.thrustG]); cur.push([i / 40 * 100, o.Ibat]); }
+    drawChart(MP.chart, { x: [0, 100], xfmt: v => `${Math.round(v)} %`, marker: S.ui.throttle * 100,
+      left: { range: [0, niceMax(SUM.full.thrustG * 1.05)], fmt: v => fmtN(v) }, right: { range: [0, niceMax(SUM.full.Ibat * 1.05)], fmt: v => fmtN(v) },
+      series: [{ data: thr, color: C.good, fill: true }, { data: cur, color: C.warn, axis: 'right' }] });
+  }
+
+  /* ================= Panneau 2 : simulation ================= */
+  const SP = {};
+  function buildSimPanel() {
+    const root = $('#tab-simulation');
+    SP.mode = seg({ label: 'Mode de vol', value: S.sim.mode, options: [['waypoints', 'Points de passage'], ['manual', 'Manuel'], ['ai', 'IA (PPO)']], onChange: v => { S.sim.mode = v; ap.vint = [0, 0, 0]; ap.altHold = Math.max(1.5, sim.p[1]); save(); updateSimMode(); updateHint(); } });
+    SP.armBtn = el('button', { type: 'button', class: 'btn primary', onclick: () => { if (sim.crashed) return; if (sim.armed && !ap.landing) ap.land(sim); else ap.takeoff(sim); updateArmBtn(); } }, 'Décoller');
+    SP.pauseBtn = el('button', { type: 'button', class: 'btn', onclick: () => { simPaused = !simPaused; SP.pauseBtn.textContent = simPaused ? 'Reprendre' : 'Pause'; } }, 'Pause');
+    const gustBtn = el('button', { type: 'button', class: 'btn', onclick: () => { if (!sim.armed) return; const r = DF.mulberry32(Date.now() & 0xffff); for (let j = 0; j < 3; j++) { sim.w[j] += (r() - 0.5) * 6; sim.v[j] += (r() - 0.5) * 3; } toast('Perturbation appliquée : le contrôleur doit stabiliser le drone'); } }, 'Perturbation');
+    const resetBtn = el('button', { type: 'button', class: 'btn', onclick: () => { resetSim(); updateArmBtn(); } }, 'Réinitialiser');
+    SP.kpis = kpiGrid([
+      { id: 'alt', label: 'Altitude', unit: 'm' }, { id: 'spd', label: 'Vitesse', unit: 'm/s' },
+      { id: 'att', label: 'Roulis / tangage', unit: '°' }, { id: 'bat', label: 'Batterie', unit: '' },
+      { id: 'cur', label: 'Courant', unit: 'A' }, { id: 'time', label: 'Temps de vol', unit: '' },
+    ]);
+    SP.bars = el('div', { class: 'bars' });
+    SP.barFill = [];
+    ['M1 AvD', 'M2 ArG', 'M3 AvG', 'M4 ArD'].forEach(n => { const f = el('div', { class: 'bar-fill', style: 'height:0%' }); const v = el('span', null, '0 %'); SP.barFill.push([f, v]); SP.bars.append(el('div', { class: 'bar' }, el('div', { class: 'bar-track' }, f), v, el('span', { class: 'bar-label' }, n))); });
+    SP.chart = el('canvas', { class: 'chart', role: 'img', 'aria-label': 'Altitude et vitesse sur les 20 dernières secondes' });
+    SP.wpList = el('div', { class: 'wp-list' });
+    SP.wpAlt = range({ id: 's-wpalt', label: 'Altitude du point sélectionné', min: 0.5, max: 12, step: 0.1, value: (S.sim.waypoints[S.sim.sel] || [0, 2, 0])[1], fmt: v => `${fmtN(v, 1)} m`, onInput: v => { const w = S.sim.waypoints[S.sim.sel]; if (w) { w[1] = v; rebuildWaypoints(); renderWpList(); save(); } } });
+    const addWp = el('button', { type: 'button', class: 'btn small', onclick: () => { if (S.sim.waypoints.length >= 12) return toast('12 points de passage au maximum'); const last = S.sim.waypoints[S.sim.waypoints.length - 1] || [0, 2, 0]; S.sim.waypoints.push([clamp(last[0] + 2, -11, 11), last[1], clamp(last[2] + 2, -11, 11)]); S.sim.sel = S.sim.waypoints.length - 1; rebuildWaypoints(); renderWpList(); save(); } }, 'Ajouter un point');
+    const delWp = el('button', { type: 'button', class: 'btn small danger', onclick: () => { if (S.sim.waypoints.length <= 1) return toast('Il faut garder au moins un point'); S.sim.waypoints.splice(S.sim.sel, 1); S.sim.sel = Math.max(0, S.sim.sel - 1); ap.wp = 0; rebuildWaypoints(); renderWpList(); save(); } }, 'Supprimer le point');
+    const r = (path, label, min, max, step, fmt) => range({ id: 's-' + path.join('-'), label, min, max, step, value: path.reduce((o, k) => o[k], S.sim), fmt, onInput: v => { const o = path.slice(0, -1).reduce((o, k) => o[k], S.sim); o[path[path.length - 1]] = v; save(); updateGainNote(); } });
+    SP.gainNote = el('p', { class: 'note' });
+    SP.manualBox = el('div', { class: 'sec' });
+    const padBtn = (lbl, code) => { const b = el('button', { type: 'button', 'aria-label': lbl }, lbl); const on = e => { e.preventDefault(); keys[code] = true; b.classList.add('on'); }; const off = () => { keys[code] = false; b.classList.remove('on'); }; b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointerleave', off); b.addEventListener('pointercancel', off); return b; };
+    SP.manualBox.append(el('h3', null, 'Commandes manuelles'),
+      el('p', { class: 'note' }, el('kbd', null, 'Z'), ' ', el('kbd', null, 'Q'), ' ', el('kbd', null, 'S'), ' ', el('kbd', null, 'D'), ' (ou WASD) : déplacement · ', el('kbd', null, 'R'), '/', el('kbd', null, 'F'), ' ou ', el('kbd', null, '↑'), '/', el('kbd', null, '↓'), ' : altitude · ', el('kbd', null, '←'), '/', el('kbd', null, '→'), ' : cap'),
+      el('div', { class: 'pad-wrap' },
+        el('div', { class: 'pad' }, el('span'), padBtn('↑', 'KeyW'), el('span'), padBtn('←', 'KeyA'), el('span'), padBtn('→', 'KeyD'), el('span'), padBtn('↓', 'KeyS'), el('span')),
+        el('div', { class: 'pad' }, el('span'), padBtn('Haut', 'KeyR'), el('span'), padBtn('↺', 'ArrowLeft'), el('span'), padBtn('↻', 'ArrowRight'), el('span'), padBtn('Bas', 'KeyF'), el('span'))));
+    SP.wpBox = sec('Points de passage', 'clic au sol pour déplacer', SP.wpList, SP.wpAlt, el('div', { class: 'btn-row' }, addWp, delWp));
+    SP.aiNote = el('p', { class: 'note' });
+    root.append(
+      head('Simulation de vol 6-DoF', 'Dynamique complète du quadrirotor : poussée et couple de chaque moteur avec leur temps de réponse, traînée, vent, batterie qui se décharge. Contrôle géométrique d\'attitude en cascade à 500 Hz.'),
+      sec('Pilotage', null, SP.mode, el('div', { class: 'btn-row' }, SP.armBtn, SP.pauseBtn, gustBtn, resetBtn), SP.aiNote),
+      sec('Télémétrie', null, SP.kpis, SP.bars, SP.chart, el('div', { class: 'legend-row' }, el('span', null, el('i', { style: `background:${C.cyan}` }), 'Altitude (m)'), el('span', null, el('i', { style: `background:${C.accent}` }), 'Vitesse (m/s)'))),
+      SP.wpBox, SP.manualBox,
+      sec('Environnement', null,
+        r(['wind'], 'Vent moyen', 0, 12, 0.5, v => `${fmtN(v, 1)} m/s`),
+        r(['windDir'], 'Provenance du vent', 0, 359, 1, v => `${v}°`),
+        r(['gust'], 'Rafales', 0, 1.5, 0.05, v => `${Math.round(v * 100)} %`),
+        toggle({ id: 's-noise', label: 'Bruit des capteurs (IMU, position)', checked: S.sim.noise, onChange: v => { S.sim.noise = v; save(); } }),
+        toggle({ id: 's-infbat', label: 'Batterie illimitée', checked: S.sim.infBattery, onChange: v => { S.sim.infBattery = v; save(); } }),
+        toggle({ id: 's-follow', label: 'Caméra qui suit le drone', checked: S.sim.follow, onChange: v => { S.sim.follow = v; save(); } })),
+      sec('Réglage du contrôleur', null,
+        r(['vmax'], 'Vitesse maximale', 1, 15, 0.5, v => `${fmtN(v, 1)} m/s`),
+        r(['maxTilt'], 'Inclinaison maximale', 10, 60, 1, v => `${v}°`),
+        r(['gains', 'pos'], 'Gain position', 0.2, 3, 0.05, v => fmtN(v, 2)),
+        r(['gains', 'vel'], 'Gain vitesse', 0.5, 8, 0.1, v => fmtN(v, 1)),
+        r(['gains', 'att'], 'Gain attitude', 2, 25, 0.5, v => fmtN(v, 1)),
+        r(['gains', 'rate'], 'Gain vitesse angulaire', 5, 60, 1, v => fmtN(v)),
+        SP.gainNote),
+    );
+    renderWpList(); updateSimMode(); updateGainNote();
+  }
+  function updateGainNote() {
+    const g = DF.effectiveGains(S.sim.gains, SUM.tau);
+    SP.gainNote.textContent = `Gains effectifs après limitation de stabilité (constante de temps moteur ${fmtN(SUM.tau * 1000)} ms) : position ${fmtN(g.pos, 2)}, vitesse ${fmtN(g.vel, 2)}, attitude ${fmtN(g.att, 1)}, angulaire ${fmtN(g.rate, 1)}.`;
+  }
+  function updateSimMode() {
+    SP.mode.set(S.sim.mode);
+    SP.manualBox.hidden = S.sim.mode !== 'manual';
+    SP.wpBox.hidden = S.sim.mode === 'manual';
+    SP.aiNote.hidden = S.sim.mode !== 'ai';
+    const st = AI.stats.updates || (AI.savedStats && AI.savedStats.updates) || 0;
+    SP.aiNote.textContent = AI.trained ? `Politique PPO après ${st} itérations d'entraînement. Elle choisit l'accélération à chaque 50 ms ; le contrôleur d'attitude l'exécute.` : 'La politique n\'est pas encore entraînée : le drone se comportera de façon erratique. Lancez l\'entraînement dans le module 3.';
+  }
+  function renderWpList() {
+    SP.wpList.replaceChildren(...S.sim.waypoints.map((w, i) => {
+      const b = el('button', { type: 'button', class: 'wp-item' + (i === ap.wp % S.sim.waypoints.length ? ' active' : ''), 'aria-pressed': String(i === S.sim.sel), onclick: () => { S.sim.sel = i; SP.wpAlt.set(w[1]); rebuildWaypoints(); renderWpList(); save(); } },
+        el('span', { class: 'n' }, i + 1), `x ${fmtN(w[0], 1)}  z ${fmtN(w[2], 1)}`, el('span', { style: `color:${C.muted}` }, `${fmtN(w[1], 1)} m`));
+      return b;
+    }));
+    const w = S.sim.waypoints[S.sim.sel]; if (w) SP.wpAlt.set(w[1]);
+  }
+  function updateArmBtn() {
+    SP.armBtn.textContent = sim.crashed ? 'Réinitialiser d\'abord' : sim.armed ? (ap.landing ? 'Atterrissage…' : 'Atterrir') : 'Décoller';
+    SP.armBtn.disabled = sim.crashed || ap.landing;
+  }
+  let lastWpShown = -1;
+  function updateSimPanel() {
+    const at = sim.attitude();
+    const spd = Math.hypot(...sim.v);
+    const K = SP.kpis;
+    K.setK('alt', fmtN(sim.p[1], 2));
+    K.setK('spd', fmtN(spd, 1));
+    K.setK('att', `${fmtN(at.roll)} / ${fmtN(at.pitch)}`);
+    const vb = sim.vbat();
+    K.setK('bat', `${S.sim.infBattery ? '∞' : Math.round(sim.soc * 100) + ' %'} · ${fmtN(vb, 1)} V`, sim.soc < 0.1 ? 'bad' : sim.soc < 0.25 ? 'warn' : '');
+    K.setK('cur', fmtN(sim.Ibat, 1));
+    const ft = sim.flightTime; K.setK('time', `${Math.floor(ft / 60)}:${String(Math.floor(ft % 60)).padStart(2, '0')}`);
+    SP.barFill.forEach(([f, v], i) => { const t = sim.armed ? sim.throttleOf(i) : 0; f.style.height = (t * 100).toFixed(1) + '%'; f.classList.toggle('hot', t > 0.9); v.textContent = Math.round(t * 100) + ' %'; });
+    const t1 = sim.time, t0 = t1 - 20;
+    const maxA = Math.max(3, ...simHist.map(h => h[1])), maxV = Math.max(3, ...simHist.map(h => h[2]));
+    drawChart(SP.chart, { x: [t0, t1], xfmt: v => `${Math.round(v - t1)} s`, left: { range: [0, niceMax(maxA)], fmt: v => fmtN(v, 1) }, right: { range: [0, niceMax(maxV)], fmt: v => fmtN(v, 1) },
+      series: [{ data: simHist.filter(h => h[0] >= t0).map(h => [h[0], h[1]]), color: C.cyan, fill: true }, { data: simHist.filter(h => h[0] >= t0).map(h => [h[0], h[2]]), color: C.accent, axis: 'right' }] });
+    if (ap.wp !== lastWpShown) { lastWpShown = ap.wp; renderWpList(); }
+    updateArmBtn();
+    updateBanner();
+    const hud = $('#vp-hud');
+    if (S.ui.tab === 'simulation') {
+      hud.hidden = false;
+      hud.replaceChildren(...[['Mode', { waypoints: 'Points', manual: 'Manuel', ai: 'IA PPO' }[S.sim.mode]], ['État', sim.crashed ? 'Impact' : sim.armed ? (ap.landing ? 'Atterrissage' : 'En vol') : 'Désarmé'], ['Altitude', `${fmtN(sim.p[1], 1)} m`], ['Vitesse', `${fmtN(spd, 1)} m/s`], ['Cap', `${fmtN((at.yaw + 360) % 360)}°`], ['Vent', `${fmtN(Math.hypot(windVec[0], windVec[2]), 1)} m/s`]].map(([a, b]) => el('div', null, el('span', null, a), el('span', null, b))));
+    }
+  }
+  function updateBanner() {
+    const b = $('#vp-banner');
+    if (S.ui.tab !== 'simulation') { b.hidden = true; return; }
+    if (sim.crashed) {
+      b.className = 'vp-banner'; b.hidden = false;
+      b.replaceChildren(el('span', null, `Impact détecté : ${sim.crashReason}.`), el('button', { type: 'button', class: 'btn small', style: 'pointer-events:auto', onclick: () => { resetSim(); updateArmBtn(); } }, 'Réinitialiser'));
+    } else if (!S.sim.infBattery && sim.soc < 0.15 && sim.armed) {
+      b.className = 'vp-banner warn'; b.hidden = false; b.replaceChildren(el('span', null, `Batterie faible (${Math.round(sim.soc * 100)} %) : atterrissez.`));
+    } else b.hidden = true;
+  }
+
+  /* ================= Panneau 3 : IA ================= */
+  const AP = {};
+  function buildAIPanel() {
+    const root = $('#tab-ai');
+    AP.ctrl = el('div', { class: 'btn-row' });
+    AP.status = el('p', { class: 'note' });
+    AP.kpis = kpiGrid([
+      { id: 'upd', label: 'Itérations', unit: '' }, { id: 'steps', label: 'Pas simulés', unit: '' },
+      { id: 'ret', label: 'Retour moyen', unit: '' }, { id: 'ok', label: 'Réussite', unit: '%' },
+      { id: 'std', label: 'Exploration σ', unit: '' }, { id: 'kl', label: 'Divergence KL', unit: '' },
+    ]);
+    AP.chart = el('canvas', { class: 'chart', role: 'img', 'aria-label': 'Courbe d\'apprentissage' });
+    AP.net = el('canvas', { class: 'chart tall', role: 'img', 'aria-label': 'Réseau de neurones de la politique' });
+    const r = (key, label, min, max, step, fmt, map, inv) => range({ id: 'ai-' + key, label, min, max, step, value: inv ? inv(S.ai[key]) : S.ai[key], fmt: v => fmt(map ? map(v) : v), onInput: v => { S.ai[key] = map ? map(v) : v; save(); } });
+    root.append(
+      head('IA & entraînement PPO', 'Un réseau de neurones apprend à rejoindre une cible par essais et erreurs (Proximal Policy Optimization), directement dans votre navigateur. Il commande l\'accélération ; le contrôleur d\'attitude du module 2 l\'exécute.'),
+      sec('Entraînement', null, AP.ctrl, AP.status, AP.kpis, AP.chart,
+        el('div', { class: 'legend-row' }, el('span', null, el('i', { style: `background:${C.cyan}` }), 'Retour moyen par épisode'), el('span', null, el('i', { style: `background:${C.good}` }), 'Taux de réussite (%)'))),
+      sec('Réseau de la politique', '9 → 64 → 64 → 3', AP.net,
+        el('p', { class: 'note' }, 'Entrées : écart à la cible (x, y, z), vitesse, accélération en cours. Sorties : accélération demandée sur 3 axes. Orange : poids positifs, bleu : poids négatifs. Seuls 14 neurones par couche cachée sont affichés.')),
+      sec('Hyperparamètres', 'appliqués à l\'itération suivante',
+        r('lr', 'Taux d\'apprentissage', -4.5, -2.5, 0.05, v => { const e = Math.floor(Math.log10(v)); const sup = String(e).replace('-', '⁻').replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]); return `${fmtN(v / Math.pow(10, e), 1)} × 10${sup}`; }, v => Math.pow(10, v), v => Math.log10(v)),
+        r('clip', 'Écrêtage ε', 0.05, 0.4, 0.01, v => fmtN(v, 2)),
+        r('ent', 'Bonus d\'entropie', 0, 0.02, 0.0005, v => fmtN(v, 4)),
+        r('gamma', 'Facteur d\'actualisation γ', 0.9, 0.999, 0.001, v => fmtN(v, 3))),
+      sec('Poids du réseau', null,
+        el('div', { class: 'btn-row' },
+          el('button', { type: 'button', class: 'btn', onclick: () => openWeightsExport() }, 'Exporter les poids'),
+          el('button', { type: 'button', class: 'btn', onclick: () => openWeightsImport() }, 'Importer des poids'),
+          confirmButton('Réinitialiser le réseau', 'Confirmer la réinitialisation', resetTraining, 'danger')),
+        el('p', { class: 'note' }, 'Les poids sont enregistrés dans ce navigateur toutes les 5 itérations et à chaque pause.')),
+    );
+    renderAIControls(); updateAIPanel(true);
+  }
+  function renderAIControls() {
+    AP.ctrl.replaceChildren(
+      AI.running ? el('button', { type: 'button', class: 'btn', onclick: pauseTraining }, 'Mettre en pause') : el('button', { type: 'button', class: 'btn primary', onclick: startTraining }, AI.stats.updates ? 'Reprendre l\'entraînement' : 'Lancer l\'entraînement'),
+      el('button', { type: 'button', class: 'btn', disabled: !AI.trained, onclick: () => { if (AI.running) pauseTraining(); S.sim.mode = 'ai'; save(); setTab('simulation'); updateSimMode(); if (!sim.armed && !sim.crashed) { ap.takeoff(sim); updateArmBtn(); } toast('Politique déployée dans la simulation'); } }, 'Déployer en simulation'));
+  }
+  function updateAIPanel(force) {
+    const st = AI.stats, sv = AI.savedStats;
+    const upd = st.updates || (sv && sv.updates) || 0;
+    const K = AP.kpis;
+    K.setK('upd', fmtN(upd));
+    K.setK('steps', st.steps ? fmtN(st.steps) : '—');
+    K.setK('ret', st.recent.length ? fmtN(st.meanReturn(), 1) : '—');
+    const ok = st.recent.length ? st.successRate() : sv ? sv.ok : null;
+    K.setK('ok', ok == null ? '—' : fmtN(ok * 100), ok == null ? '' : ok > 0.9 ? 'good' : ok > 0.5 ? '' : 'warn');
+    K.setK('std', fmtN(Math.exp(AI.agent.logStd.reduce((s, x) => s + x, 0) / 3), 2));
+    K.setK('kl', st.updates ? fmtN(st.kl, 4) : '—', st.kl > 0.05 ? 'warn' : '');
+    const tauNow = DF.responseTau(SUM, S.sim.gains);
+    const mismatch = AI.trained && Math.abs(tauNow - AI.agent.tauA) > 0.05;
+    AP.status.textContent = AI.running ? `Entraînement en cours sur 16 environnements, 2 048 pas par itération. Comptez 40 à 60 itérations pour dépasser 90 % de réussite.`
+      : AI.trained ? `Politique prête, entraînée pour un temps de réponse de ${fmtN(AI.agent.tauA * 1000)} ms.${mismatch ? ` Le drone actuel répond en ${fmtN(tauNow * 1000)} ms : réinitialisez puis réentraînez pour l'adapter.` : ''} La vue montre la politique en démonstration.`
+      : 'Réseau non entraîné. Lancez l\'entraînement : les sphères partent au hasard puis convergent vers la cible.';
+    if (force || S.ui.tab === 'ai') {
+      const h = st.history;
+      if (h.length) {
+        const maxR = Math.max(5, ...h.map(x => x.ret)), minR = Math.min(0, ...h.map(x => x.ret));
+        drawChart(AP.chart, { x: [h[0].u, Math.max(h[0].u + 1, h[h.length - 1].u)], xfmt: v => `it. ${Math.round(v)}`, left: { range: [Math.floor(minR / 5) * 5, niceMax(maxR)], fmt: v => fmtN(v) }, right: { range: [0, 100], fmt: v => fmtN(v) + '%' },
+          series: [{ data: h.map(x => [x.u, x.ret]), color: C.cyan, fill: true }, { data: h.map(x => [x.u, x.ok * 100]), color: C.good, axis: 'right' }] });
+      } else drawChart(AP.chart, { x: [0, 10], xfmt: v => `it. ${Math.round(v)}`, left: { range: [-20, 25], fmt: v => fmtN(v) }, right: { range: [0, 100], fmt: v => fmtN(v) + '%' }, series: [] });
+      drawNet();
+    }
+  }
+  function drawNet() {
+    const cv = AP.net, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const W = cv.clientWidth, H = cv.clientHeight; if (!W || !H) return;
+    if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+    const pi = AI.agent.pi, show = [9, 14, 14, 3];
+    const inL = ['Δx', 'Δy', 'Δz', 'vx', 'vy', 'vz', 'ax', 'ay', 'az'], outL = ['ax', 'ay', 'az'];
+    const xs = show.map((_, i) => 34 + i * (W - 68) / 3);
+    const ys = n => Array.from({ length: n }, (_, i) => 14 + (i + 0.5) * (H - 28) / n);
+    const Ys = show.map(ys);
+    for (let l = 0; l < 3; l++) {
+      const ni = pi.sizes[l], Wl = pi.W[l];
+      let mx = 1e-6; for (let o = 0; o < show[l + 1]; o++) for (let i = 0; i < show[l]; i++) mx = Math.max(mx, Math.abs(Wl[o * ni + i]));
+      for (let o = 0; o < show[l + 1]; o++) for (let i = 0; i < show[l]; i++) {
+        const w = Wl[o * ni + i], a = Math.abs(w) / mx;
+        if (a < 0.15) continue;
+        g.strokeStyle = w > 0 ? C.accent : C.cyan; g.globalAlpha = a * 0.55; g.lineWidth = 0.4 + a * 1.4;
+        g.beginPath(); g.moveTo(xs[l], Ys[l][i]); g.lineTo(xs[l + 1], Ys[l + 1][o]); g.stroke();
+      }
+    }
+    g.globalAlpha = 1;
+    g.font = '10px ' + (cssv('--font-mono') || 'monospace');
+    Ys.forEach((col, l) => col.forEach((y, i) => {
+      g.fillStyle = C.panel2; g.strokeStyle = C.fg; g.lineWidth = 1; g.beginPath(); g.arc(xs[l], y, 3.6, 0, TAU); g.fill(); g.stroke();
+      g.fillStyle = C.muted;
+      if (l === 0) { g.textAlign = 'right'; g.fillText(inL[i], xs[l] - 8, y + 3); }
+      if (l === 3) { g.textAlign = 'left'; g.fillText(outL[i], xs[l] + 8, y + 3); }
+    }));
+  }
+  function openWeightsExport() {
+    const txt = JSON.stringify(AI.agent.toJSON());
+    const ta = el('textarea', { readonly: true, 'aria-label': 'Poids au format JSON' }, txt);
+    modal('Exporter les poids PPO', el('div', { class: 'field' }, el('p', { class: 'note' }, `${fmtN(txt.length / 1024, 0)} Ko. Conservez ce fichier pour réutiliser la politique.`), ta), close => [
+      el('button', { type: 'button', class: 'btn primary', onclick: () => { ta.select(); copyText(txt, 'Poids copiés'); } }, 'Copier'),
+      el('button', { type: 'button', class: 'btn', onclick: () => download('droneforge-politique.json', txt, 'application/json') }, 'Télécharger'),
+    ]);
+  }
+  function openWeightsImport() {
+    const ta = el('textarea', { placeholder: 'Collez ici le JSON exporté', 'aria-label': 'Poids au format JSON' });
+    const file = el('input', { type: 'file', accept: '.json,application/json', 'aria-label': 'Fichier de poids' });
+    file.addEventListener('change', () => { const f = file.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { ta.value = r.result; }; r.readAsText(f); });
+    modal('Importer des poids PPO', el('div', { class: 'field' }, file, ta), close => [el('button', { type: 'button', class: 'btn primary', onclick: () => {
+      try { const j = JSON.parse(ta.value); if (AI.running) pauseTraining(); AI.agent.load(j); AI.gen = null; AI.stats = new DF.PPOStats(); AI.trained = true; AI.savedStats = null; demo.envs = null; persistPolicy(); renderAIControls(); updateAIPanel(true); updateSimMode(); close(); toast('Poids chargés'); }
+      catch (e) { toast(`Import impossible : ${e.message}`); }
+    } }, 'Charger')]);
+  }
+
+  /* ================= Panneau 4 : carte mère ================= */
+  const BP = {};
+  function buildBoardPanel() {
+    const root = $('#tab-motherboard');
+    const c = S.cfg;
+    BP.info = el('div', { class: 'info-card' });
+    BP.chips = el('div', { class: 'chips' });
+    BP.checks = el('ul', { class: 'checks' });
+    BP.power = el('div', { style: 'display:grid;gap:10px' });
+    const ch = (key, scope) => v => { S.cfg[key] = key === 'esc' ? Number(v) : v; S.cfg.preset = 'custom'; MP.preset.set('custom'); changed(scope || 'board'); };
+    BP.sel = {
+      mcu: select({ id: 'b-mcu', label: 'Microcontrôleur', value: c.mcu, options: Object.entries(DF.MCU).map(([k, v]) => [k, `${v.label} · ${v.uarts} UART`]), onChange: ch('mcu') }),
+      imu: select({ id: 'b-imu', label: 'Centrale inertielle', value: c.imu, options: Object.entries(DF.IMU).map(([k, v]) => [k, `${k} · bruit ${v.noise.split(' ')[0]}`]), onChange: ch('imu') }),
+      esc: select({ id: 'b-esc', label: 'ESC 4-en-1', value: c.esc, options: Object.entries(DF.ESC).map(([k, v]) => [k, `${k} A · ${v.maxS}S max`]), onChange: ch('esc', 'all') }),
+      fw: select({ id: 'b-fw', label: 'Firmware', value: c.firmware, options: DF.FIRMWARES.map(f => [f, f]), onChange: ch('firmware') }),
+      video: select({ id: 'b-video', label: 'Vidéo', value: c.video, options: Object.entries(DF.VIDEO).map(([k, v]) => [k, v.label]), onChange: ch('video', 'all') }),
+      gps: toggle({ id: 'b-gps', label: 'Module GPS + compas', checked: c.gps, onChange: v => { S.cfg.gps = v; S.cfg.preset = 'custom'; MP.preset.set('custom'); changed('all'); } }),
+    };
+    root.append(
+      head('Carte mère & électronique', 'Pile contrôleur de vol + ESC 4-en-1 au format 30,5 × 30,5 mm. Les composants, les bus et le bilan d\'alimentation suivent la configuration.'),
+      sec('Composant sélectionné', null, BP.info, BP.chips),
+      sec('Vérifications', null, BP.checks),
+      sec('Bilan d\'alimentation', null, BP.power),
+      sec('Configuration', null, el('div', { class: 'grid2' }, BP.sel.mcu, BP.sel.imu, BP.sel.esc, BP.sel.fw), BP.sel.video, BP.sel.gps),
+      sec('Affichage 3D', null,
+        toggle({ id: 'b-explode', label: 'Séparer la pile FC / ESC', checked: S.ui.boardExplode, onChange: v => { S.ui.boardExplode = v; save(); } }),
+        toggle({ id: 'b-signals', label: 'Afficher les signaux', checked: S.ui.signals, onChange: v => { S.ui.signals = v; save(); } })),
+    );
+  }
+  function boardCompList() { const seen = new Set(); return boardComponents(S.cfg).filter(cp => { if (['ind5', 'ind10'].includes(cp.id)) return false; if (!cp.group) return true; if (seen.has(cp.group)) return false; seen.add(cp.group); return true; }); }
+  function renderBoardInfo() {
+    const comps = boardComponents(S.cfg);
+    let cp = comps.find(x => (x.group || x.id) === S.board.selected) || comps[0];
+    if ((cp.group || cp.id) !== S.board.selected) S.board.selected = cp.group || cp.id;
+    const name = cp.group ? cp.label.replace(/ moteur \d$/, '') + (cp.group === 'fet' ? ' (6 par moteur, 24 au total)' : ' (un par moteur)') : cp.label;
+    BP.info.replaceChildren(el('h4', null, name), el('p', { class: 'note' }, cp.role), el('dl', null, el('dt', null, 'Interface'), el('dd', null, cp.bus), el('dt', null, 'Consommation'), el('dd', null, cp.power), el('dt', null, 'Carte'), el('dd', null, cp.board === 'fc' ? 'Contrôleur de vol (haut)' : 'ESC 4-en-1 (bas)')));
+    BP.chips.replaceChildren(...boardCompList().map(x => { const key = x.group || x.id; const short = x.short || x.label; return el('button', { type: 'button', class: 'chip', 'aria-pressed': String(key === S.board.selected), onclick: () => { S.board.selected = key; save(); renderBoardInfo(); highlightSelected(); } }, short); }));
+  }
+  function updateBoardPanel() {
+    renderBoardInfo();
+    renderChecks(BP.checks, DF.boardChecks(SUM));
+    const e = SUM.elec;
+    const meters = [];
+    for (const r of ['5V', '10V']) {
+      const R = e.rails[r], p = R.mA / R.limit;
+      meters.push(el('div', { class: 'meter' }, el('div', { class: 'meter-head' }, el('span', null, `Régulateur ${r}`), el('span', null, `${fmtN(R.mA)} / ${fmtN(R.limit)} mA`)), el('div', { class: 'meter-track' }, el('div', { class: 'meter-fill' + (p > 1 ? ' bad' : p > 0.8 ? ' warn' : ''), style: `width:${Math.min(100, p * 100)}%` }))));
+    }
+    const list = el('ul', { class: 'checks' }, e.loads.map(l => el('li', { class: 'info' }, `${l.label} : ${l.rail === 'VBAT' ? fmtN(l.W, 1) + ' W sur la batterie' : fmtN(l.mA) + ' mA sur ' + l.rail}`)));
+    BP.power.replaceChildren(...meters, list, el('p', { class: 'note' }, `Électronique embarquée : ${fmtN(e.watts, 1)} W, soit ${fmtN(e.ampsBat, 2)} A prélevés sur la batterie.`));
+  }
+
+  /* ================= Panneau 5 : production ================= */
+  const PP = {};
+  const RATES = { EUR: 1, XOF: 655.957, USD: 1.08 };
+  const money = (eur, cur) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: cur || S.prod.currency, maximumFractionDigits: (cur || S.prod.currency) === 'XOF' ? 0 : 2, minimumFractionDigits: (cur || S.prod.currency) === 'XOF' ? 0 : 2 }).format(eur * RATES[cur || S.prod.currency]);
+  function buildProdPanel() {
+    const root = $('#tab-production');
+    const qty = el('input', { type: 'number', id: 'p-qty', min: 1, max: 10000, step: 1, value: S.prod.qty });
+    qty.addEventListener('input', () => { const v = clamp(Math.round(Number(qty.value)) || 1, 1, 10000); S.prod.qty = v; save(); updateProdPanel(); });
+    qty.addEventListener('blur', () => { qty.value = S.prod.qty; });
+    PP.kpis = kpiGrid([
+      { id: 'unit', label: 'Coût matière / drone' }, { id: 'batch', label: 'Coût matière du lot' },
+      { id: 'auw', label: 'Masse au décollage', unit: 'g' }, { id: 'twr', label: 'Poussée / poids', unit: ': 1' },
+      { id: 'flight', label: 'Autonomie stat.', unit: 'min' }, { id: 'hours', label: 'Assemblage du lot', unit: 'h' },
+    ]);
+    PP.stack = el('div', { class: 'stack', role: 'img', 'aria-label': 'Répartition des masses' });
+    PP.stackLegend = el('div', { class: 'legend-row' });
+    PP.table = el('div', { class: 'table-wrap' });
+    PP.note = el('p', { class: 'note' });
+    PP.progress = el('div', { class: 'progress' }, el('div', { style: 'width:0%' }));
+    PP.progressText = el('span', { class: 'aside' });
+    PP.checklist = el('div', { class: 'checklist' });
+    root.append(
+      head('Production & nomenclature', 'Nomenclature générée depuis la configuration des modules 1 et 4, avec masses, coûts et temps d\'assemblage du lot.'),
+      sec('Lot de production', null,
+        el('div', { class: 'grid2' }, el('div', { class: 'field' }, el('label', { for: 'p-qty' }, 'Quantité à produire'), qty),
+          el('div', { class: 'field' }, el('label', null, 'Devise'), seg({ label: 'Devise', value: S.prod.currency, options: [['XOF', 'FCFA'], ['EUR', 'EUR'], ['USD', 'USD']], onChange: v => { S.prod.currency = v; save(); updateProdPanel(); } }))),
+        PP.kpis, PP.note),
+      sec('Répartition des masses', null, PP.stack, PP.stackLegend),
+      sec('Nomenclature (BOM)', null, PP.table,
+        el('div', { class: 'btn-row' },
+          el('button', { type: 'button', class: 'btn', onclick: () => copyText(bomCSV(), 'Nomenclature copiée au format CSV') }, 'Copier en CSV'),
+          el('button', { type: 'button', class: 'btn', onclick: () => download(`droneforge-bom-${SUM.designation}-x${S.prod.qty}.csv`, '﻿' + bomCSV(), 'text/csv') }, 'Télécharger le CSV'))),
+      el('section', { class: 'sec' }, el('h3', null, 'Procédure d\'assemblage', PP.progressText), PP.progress, PP.checklist,
+        el('div', { class: 'btn-row' }, confirmButton('Tout décocher', 'Confirmer', () => { S.checklist = {}; save(); renderChecklist(); }))),
+      sec('Affichage 3D', null,
+        range({ id: 'p-explode', label: 'Vue éclatée', min: 0, max: 1, step: 0.01, value: S.ui.prodExplode, fmt: v => `${Math.round(v * 100)} %`, onInput: v => { S.ui.prodExplode = v; save(); } }),
+        toggle({ id: 'p-rotate', label: 'Rotation automatique', checked: S.ui.autoRotate, onChange: v => { S.ui.autoRotate = v; save(); } })),
+    );
+    renderChecklist();
+  }
+  function bomCSV() {
+    const cur = S.prod.currency, rate = RATES[cur], d = DF.discountFor(S.prod.qty);
+    const rows = [['Référence', 'Catégorie', 'Désignation', 'Spécification', 'Qté / drone', 'Qté lot', 'Masse unitaire (g)', `Prix unitaire (${cur})`, `Total lot (${cur})`]];
+    for (const l of SUM.bom.lines) rows.push([l.ref, l.cat, l.name, l.spec, l.qty, l.qty * S.prod.qty, l.mass.toFixed(1), (l.price * rate * (1 - d)).toFixed(2), (l.price * rate * (1 - d) * l.qty * S.prod.qty).toFixed(2)]);
+    return rows.map(r => r.map(v => { const s = String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }).join(';')).join('\n');
+  }
+  function updateProdPanel() {
+    const q = S.prod.qty, d = DF.discountFor(q);
+    const unit = SUM.bom.lines.reduce((s, l) => s + l.price * l.qty, 0) * (1 - d);
+    const asm = DF.assemblyHours(S.cfg, q);
+    const K = PP.kpis;
+    K.setK('unit', money(unit)); K.setK('batch', money(unit * q));
+    K.setK('auw', fmtN(SUM.auwG)); K.setK('twr', fmtN(SUM.twr, 1), SUM.twr < 1.4 ? 'bad' : SUM.twr < 2 ? 'warn' : 'good');
+    K.setK('flight', SUM.hover ? fmtN(SUM.flightMin, 1) : '—'); K.setK('hours', fmtN(asm.totalH, asm.totalH < 10 ? 1 : 0));
+    PP.note.textContent = `Remise volume ${Math.round(d * 100)} % (paliers à 10, 25, 100 et 1 000 unités). Premier drone assemblé en ${asm.firstMin} min, puis courbe d'apprentissage à 85 %. Prix indicatifs${S.prod.currency === 'USD' ? ', taux USD approximatif' : ''}.`;
+    const cats = {};
+    for (const l of SUM.bom.lines) cats[l.cat] = (cats[l.cat] || 0) + l.mass * l.onboard;
+    const palette = { 'Énergie': C.warn, 'Propulsion': C.accent, 'Structure': C.dim, 'Électronique': C.cyan, 'Vidéo': C.phasec, 'Radio': C.good, 'Navigation': C.good };
+    const tot = SUM.auwG;
+    const entries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+    PP.stack.replaceChildren(...entries.map(([k, v]) => el('div', { title: `${k} : ${fmtN(v)} g`, style: `width:${v / tot * 100}%;background:${palette[k] || C.muted}` })));
+    PP.stackLegend.replaceChildren(...entries.map(([k, v]) => el('span', null, el('i', { style: `background:${palette[k] || C.muted};height:8px;width:8px` }), `${k} ${fmtN(v)} g (${Math.round(v / tot * 100)} %)`)));
+    const rows = SUM.bom.lines.map(l => {
+      const m = l.mass * l.onboard;
+      return el('tr', null,
+        el('td', null, l.name, el('span', { class: 'sub' }, el('span', { class: 'ref' }, l.ref), ` · ${l.spec} · ${fmtN(m, m < 10 ? 1 : 0)} g`)),
+        el('td', { class: 'num' }, `×${l.qty}`),
+        el('td', { class: 'num' }, money(l.price * (1 - d) * l.qty)));
+    });
+    PP.table.replaceChildren(el('table', { class: 'bom' },
+      el('thead', null, el('tr', null, el('th', null, 'Désignation'), el('th', { class: 'num' }, 'Qté'), el('th', { class: 'num' }, 'Coût / drone'))),
+      el('tbody', null, rows),
+      el('tfoot', null, el('tr', null, el('td', null, `Total par drone · ${fmtN(tot)} g`), el('td'), el('td', { class: 'num' }, money(unit))))));
+  }
+  function renderChecklist() {
+    const items = DF.CHECKLIST;
+    PP.checklist.replaceChildren(...items.map((t, i) => {
+      const cb = el('input', { type: 'checkbox', id: 'chk-' + i });
+      cb.checked = !!S.checklist[i];
+      cb.addEventListener('change', () => { S.checklist[i] = cb.checked; save(); updateChecklistProgress(); });
+      return el('label', { for: 'chk-' + i }, cb, el('span', null, `${i + 1}. ${t}`));
+    }));
+    updateChecklistProgress();
+  }
+  function updateChecklistProgress() {
+    const n = DF.CHECKLIST.length, done = DF.CHECKLIST.filter((_, i) => S.checklist[i]).length;
+    PP.progress.firstChild.style.width = (done / n * 100) + '%';
+    PP.progressText.textContent = `${done} / ${n}`;
+  }
+
+  /* ================= Propagation des changements ================= */
+  let rebuildTimer = 0, pendingScopes = new Set();
+  function changed(scope) {
+    SUM = DF.summarize(S.cfg);
+    S.cfg = SUM.cfg;
+    save();
+    updateHeader(); updateMotorPanel(); updateBoardPanel(); updateProdPanel(); updateGainNote(); updateAIPanel(true);
+    sim.configure(SUM);
+    pendingScopes.add(scope);
+    clearTimeout(rebuildTimer);
+    rebuildTimer = setTimeout(() => {
+      const all = pendingScopes.has('all');
+      if (all || pendingScopes.has('motor')) { rebuildMotor(); rebuildSimDrone(); rebuildProdDrone(); }
+      if (all || pendingScopes.has('board') || pendingScopes.has('motor')) rebuildBoard();
+      if (all && !pendingScopes.has('motor')) { rebuildSimDrone(); rebuildProdDrone(); }
+      pendingScopes.clear();
+    }, 120);
+  }
+
+  /* ================= Onglets ================= */
+  function updateHint() {
+    const v = views[S.ui.tab];
+    const hint = v ? (typeof v.hint === 'function' ? v.hint() : v.hint) : '';
+    $('#vp-hint').textContent = hint;
+    $('#vp-hint').hidden = !hint || !HAS3D;
+    $('#vp-legend').replaceChildren(...(HAS3D && v && v.legend ? v.legend() : []).map(([t, c]) => el('span', null, el('i', { style: `background:${c}` }), t)));
+  }
+  function setTab(tab) {
+    if (!TABS.includes(tab)) return;
+    const prev = S.ui.tab;
+    if (views[prev]) storeCam(views[prev]);
+    S.ui.tab = tab; save();
+    TABS.forEach(t => {
+      const b = $('#tabbtn-' + t), p = $('#tab-' + t);
+      b.setAttribute('aria-selected', String(t === tab)); b.tabIndex = t === tab ? 0 : -1; p.hidden = t !== tab;
+    });
+    if (controls) controls.autoRotate = false;
+    if (views[tab]) applyCam(views[tab]);
+    $('#vp-tip').hidden = true; $('#vp-hud').hidden = tab !== 'simulation';
+    if (renderer) renderer.domElement.style.cursor = '';
+    updateHint(); updateBanner();
+    $('#side-panel').scrollTop = 0;
+    if (history.replaceState) history.replaceState(null, '', '#' + tab);
+    requestAnimationFrame(() => { if (tab === 'motor') updateMotorPanel(); if (tab === 'ai') updateAIPanel(true); if (tab === 'simulation') updateSimPanel(); });
+  }
+  function initTabs() {
+    const btns = TABS.map(t => $('#tabbtn-' + t));
+    btns.forEach((b, i) => {
+      b.addEventListener('click', () => setTab(TABS[i]));
+      b.addEventListener('keydown', e => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        e.preventDefault();
+        const j = (i + (e.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length;
+        setTab(TABS[j]); btns[j].focus();
+      });
+    });
+  }
+
+  /* ================= Projet : export / import ================= */
+  function initProjectButtons() {
+    $('#btn-export').addEventListener('click', () => {
+      const txt = JSON.stringify({ format: 'droneforge-project-2', savedAt: new Date().toISOString(), state: S }, null, 2);
+      const ta = el('textarea', { readonly: true, 'aria-label': 'Projet au format JSON' }, txt);
+      modal('Exporter le projet', el('div', { class: 'field' }, el('p', { class: 'note' }, 'Configuration, points de passage, réglages et liste d\'assemblage. Les poids de l\'IA s\'exportent depuis le module 3.'), ta), () => [
+        el('button', { type: 'button', class: 'btn primary', onclick: () => { ta.select(); copyText(txt, 'Projet copié'); } }, 'Copier'),
+        el('button', { type: 'button', class: 'btn', onclick: () => download(`droneforge-${SUM.designation}.json`, txt, 'application/json') }, 'Télécharger'),
+      ]);
+    });
+    $('#btn-import').addEventListener('click', () => {
+      const ta = el('textarea', { placeholder: 'Collez ici un projet DroneForge (JSON)', 'aria-label': 'Projet au format JSON' });
+      const file = el('input', { type: 'file', accept: '.json,application/json', 'aria-label': 'Fichier projet' });
+      file.addEventListener('change', () => { const f = file.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { ta.value = r.result; }; r.readAsText(f); });
+      modal('Importer un projet', el('div', { class: 'field' }, file, ta), close => [
+        el('button', { type: 'button', class: 'btn primary', onclick: () => {
+          try {
+            const j = JSON.parse(ta.value);
+            if (!j || j.format !== 'droneforge-project-2' || !j.state) throw new Error('fichier non reconnu');
+            S = validateState(mergeState(defaultState(), j.state));
+            store.set(STORE_KEY, S);
+            close(); toast('Projet importé, rechargement…');
+            setTimeout(() => location.reload(), 600);
+          } catch (e) { toast(`Import impossible : ${e.message}`); }
+        } }, 'Importer'),
+        confirmButton('Réinitialiser le projet', 'Confirmer : tout effacer', () => { store.del(STORE_KEY); location.reload(); }, 'danger'),
+      ]);
+    });
+  }
+
+  /* ================= Clavier ================= */
+  function initKeys() {
+    const typing = e => /INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '') && e.target.type !== 'range' && e.target.type !== 'checkbox';
+    document.addEventListener('keydown', e => {
+      if (typing(e) || $('#modal-root').firstChild) return;
+      const flying = S.ui.tab === 'simulation' && S.sim.mode === 'manual';
+      if (!flying && !e.ctrlKey && !e.metaKey && !e.altKey && /^Digit[1-5]$/.test(e.code)) { setTab(TABS[Number(e.code.slice(5)) - 1]); return; }
+      if (flying) {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+        keys[e.code] = true;
+      }
+    });
+    document.addEventListener('keyup', e => { keys[e.code] = false; });
+    window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+  }
+
+  /* ================= Boucle principale ================= */
+  let last = performance.now(), panelT = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+    pumpTraining();
+    if (S.ui.tab === 'simulation') simTick(dt);
+    if (S.ui.tab === 'ai') demoTick(dt);
+    const v = views[S.ui.tab];
+    if (renderer && v) { v.update(dt); if (controls) controls.update(); renderer.render(v.scene, camera); }
+    panelT += dt;
+    if (panelT > 0.1) {
+      panelT = 0;
+      if (S.ui.tab === 'simulation') updateSimPanel();
+      if (S.ui.tab === 'ai' || AI.running) updateAIPanel(false);
+    }
+  }
+
+  /* ================= Démarrage ================= */
+  function boot() {
+    init3D();
+    if (HAS3D) {
+      try { setupMotorView(); setupSimView(); setupAIView(); setupBoardView(); setupProdView(); }
+      catch (e) { console.error(e); renderer = null; showFallback('Erreur lors de la construction des scènes 3D. Les calculs restent disponibles.'); }
+    }
+    buildMotorPanel(); buildSimPanel(); buildAIPanel(); buildBoardPanel(); buildProdPanel();
+    initTabs(); initProjectButtons(); initKeys();
+    updateHeader(); updateMotorPanel(); updateBoardPanel(); updateProdPanel();
+    if (HAS3D) { rebuildMotor(); rebuildSimDrone(); rebuildWaypoints(); rebuildBoard(); rebuildProdDrone(); }
+    setTab(S.ui.tab);
+    updateArmBtn();
+    window.addEventListener('resize', () => { updateMotorPanel(); updateAIPanel(true); });
+    window.addEventListener('beforeunload', () => { store.set(STORE_KEY, S); if (AI.running) persistPolicy(); });
+    document.addEventListener('visibilitychange', () => { last = performance.now(); });
+    requestAnimationFrame(frame);
+  }
+  boot();
+})();
+
+</script>
+</body>
+</html>

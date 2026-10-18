@@ -1,0 +1,99 @@
+======================================================================
+FRANÇAIS (fr-FR) — langue par défaut
+======================================================================
+
+--- Nom de l'application (29/30 caractères) ---
+DroneForge : simulateur drone
+
+
+--- Description courte (78/80 caractères) ---
+Concevez, faites voler et entraînez l'IA de votre drone. Hors ligne, sans pub.
+
+
+--- Description complète (2363/4000 caractères) ---
+DroneForge est un atelier complet de conception de drones multirotors, dans votre poche. Choisissez vos composants, faites voler votre drone en simulation, entraînez une intelligence artificielle à le piloter et obtenez la liste de pièces pour le fabriquer.
+
+CONCEVEZ VOTRE MOTEUR ET VOTRE HÉLICE
+• Réglez le stator, le Kv, le bobinage, l'hélice, la batterie et le châssis
+• Poussée, régime, courant, rendement, température et vitesse en bout de pale calculés en temps réel
+• Moteur en 3D avec vue éclatée et commutation des phases animée
+• Bilan du drone : masse, rapport poussée/poids, gaz au stationnaire, autonomie
+• Cinq configurations prêtes : course 5", freestyle 6S, longue portée 7", micro 3", cartographie 15"
+
+FAITES-LE VOLER
+• Simulation physique à 6 degrés de liberté : poussée de chaque moteur, traînée, vent, rafales, batterie qui se décharge
+• Pilotage aux manches virtuels, par points de passage ou par l'IA
+• Télémétrie en direct : altitude, vitesse, attitude, courant, charge des moteurs
+
+ENTRAÎNEZ UNE IA
+• Un réseau de neurones apprend à piloter, directement sur votre téléphone
+• Laboratoire : 5 algorithmes (PPO, A2C, REINFORCE, stratégies d'évolution, CEM), architecture du réseau réglable, 3 tâches (rejoindre un point, poursuivre une cible, atterrir)
+• Banc d'essai de fiabilité : 6 scénarios (vent fort, capteurs bruités, drone lent…), score sur 100 et comparaison avec un contrôleur classique
+• Export des modèles en C pour microcontrôleur, en Python et en JavaScript
+
+EXPLOREZ L'ÉLECTRONIQUE
+• Contrôleur de vol et ESC 4-en-1 en 3D, composants identifiables d'un toucher
+• Vérification automatique : courant ESC, tension, ports série, régulateurs, firmware
+
+PASSEZ À LA PRODUCTION
+• Nomenclature complète générée à partir de votre configuration
+• Coûts en francs CFA, euros ou dollars, remises par quantité, temps d'assemblage du lot
+• Procédure d'assemblage en 13 étapes
+
+RESPECT DE VOTRE VIE PRIVÉE
+DroneForge fonctionne entièrement hors ligne. Aucun compte, aucune publicité, aucune donnée collectée. Vos projets restent sur votre appareil et ne le quittent que si vous les exportez.
+
+À SAVOIR
+Les calculs reposent sur des modèles physiques simplifiés. Ils servent à comparer des choix de conception et à apprendre ; ils ne remplacent pas des essais réels ni la réglementation aérienne de votre pays.
+
+Conçu par HK Studio, Abidjan.
+
+======================================================================
+ANGLAIS (en-US) — traduction
+======================================================================
+
+--- Nom de l'application (27/30 caractères) ---
+DroneForge: Drone Simulator
+
+
+--- Description courte (72/80 caractères) ---
+Design, fly and train an AI pilot for your drone. Works offline, no ads.
+
+
+--- Description complète (2013/4000 caractères) ---
+DroneForge is a complete multirotor drone design workshop in your pocket. Pick your parts, fly your drone in simulation, train an artificial intelligence to pilot it and get the bill of materials to build it.
+
+DESIGN YOUR MOTOR AND PROPELLER
+• Tune stator size, Kv, winding, propeller, battery and frame
+• Thrust, RPM, current, efficiency, temperature and tip speed computed in real time
+• 3D motor with exploded view and animated phase commutation
+• Drone summary: weight, thrust-to-weight ratio, hover throttle, flight time
+• Five ready-made builds: 5" racing, 6S freestyle, 7" long range, 3" micro, 15" mapping
+
+FLY IT
+• 6-degree-of-freedom physics: per-motor thrust, drag, wind, gusts, draining battery
+• Fly with on-screen sticks, by waypoints or let the AI fly
+• Live telemetry: altitude, speed, attitude, current, motor load
+
+TRAIN AN AI
+• A neural network learns to fly, right on your phone
+• Lab: 5 algorithms (PPO, A2C, REINFORCE, evolution strategies, CEM), adjustable network architecture, 3 tasks (reach a point, chase a target, land)
+• Reliability test bench: 6 scenarios (strong wind, noisy sensors, slow drone…), score out of 100 and comparison with a classic controller
+• Export models as C for microcontrollers, Python and JavaScript
+
+EXPLORE THE ELECTRONICS
+• Flight controller and 4-in-1 ESC in 3D, tap any component to identify it
+• Automatic checks: ESC current, voltage, serial ports, regulators, firmware
+
+GO TO PRODUCTION
+• Full bill of materials generated from your build
+• Costs in CFA francs, euros or dollars, volume discounts, batch assembly time
+• 13-step assembly checklist
+
+YOUR PRIVACY
+DroneForge works fully offline. No account, no ads, no data collected. Your projects stay on your device and only leave it if you export them.
+
+GOOD TO KNOW
+Calculations use simplified physical models. They are meant for comparing design choices and learning; they do not replace real-world testing or your country's aviation rules. The app interface is in French.
+
+Made by HK Studio, Abidjan.

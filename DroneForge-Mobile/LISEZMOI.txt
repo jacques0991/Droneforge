@@ -1,0 +1,12 @@
+DroneForge Mobile 1.0.0 — application Android (HK Studio)
+
+Commencez par ouvrir GUIDE-PUBLICATION.html : toutes les étapes y sont, dans l'ordre.
+
+En bref :
+  1. Installez Android Studio.
+  2. Ouvrez le sous-dossier "android" dans Android Studio.
+  3. Build > Generate Signed App Bundle : vous obtenez le fichier .aab à publier.
+  4. Dans la Play Console, utilisez les visuels et les textes du dossier "store".
+
+Identifiant de l'application : com.hkstudioci.droneforge (définitif une fois publié).
+Version : 1.0.0 (code 1). Android 7.0 minimum, cible Android 16 (API 36).

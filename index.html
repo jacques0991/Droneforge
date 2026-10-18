@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DroneForge - Jumeau numérique intégral pour drones autonomes</title>
+<meta name="description" content="Atelier moteur 3D, simulation de vol 6-DoF, entraînement PPO, carte mère et nomenclature de production pour drones multirotors.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ff8a3d'/%3E%3Ctext x='16' y='21' font-family='monospace' font-weight='800' font-size='13' text-anchor='middle' fill='%231c0e04'%3EDF%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app-container">
+  <header id="top-header">
+    <div class="brand-section">
+      <div class="brand-logo" aria-hidden="true">DF</div>
+      <div>
+        <span class="brand-title">DroneForge</span>
+        <span class="brand-version">v2.3 · jumeau numérique</span>
+      </div>
+    </div>
+    <div class="header-telemetry" aria-live="polite">
+      <div class="head-stat"><span class="head-stat-label">Configuration</span><span class="head-stat-val text-cyan" id="header-preset-name">—</span></div>
+      <div class="head-stat"><span class="head-stat-label">Moteurs</span><span class="head-stat-val" id="header-kv">—</span></div>
+      <div class="head-stat"><span class="head-stat-label">Poussée totale (4×)</span><span class="head-stat-val text-emerald" id="header-thrust">—</span></div>
+      <div class="head-stat"><span class="head-stat-label">Poussée / poids</span><span class="head-stat-val" id="header-twr">—</span></div>
+      <div class="head-stat"><span class="head-stat-label">Alimentation</span><span class="head-stat-val text-amber" id="header-voltage">—</span></div>
+    </div>
+    <div class="head-actions">
+      <button class="btn small" id="btn-export" type="button">Exporter</button>
+      <button class="btn small" id="btn-import" type="button">Importer</button>
+    </div>
+  </header>
+
+  <nav id="nav-tabs-bar" role="tablist" aria-label="Modules">
+    <button class="nav-tab" role="tab" data-tab="motor" id="tabbtn-motor" aria-controls="tab-motor"><span class="num">1</span><span class="lbl-long">Atelier moteur 3D</span><span class="lbl-short">Moteur</span></button>
+    <button class="nav-tab" role="tab" data-tab="simulation" id="tabbtn-simulation" aria-controls="tab-simulation"><span class="num">2</span><span class="lbl-long">Simulation de vol 6-DoF</span><span class="lbl-short">Vol</span></button>
+    <button class="nav-tab" role="tab" data-tab="ai" id="tabbtn-ai" aria-controls="tab-ai"><span class="num">3</span><span class="lbl-long">IA &amp; entraînement PPO</span><span class="lbl-short">IA</span><span class="dot" aria-hidden="true"></span></button>
+    <button class="nav-tab" role="tab" data-tab="motherboard" id="tabbtn-motherboard" aria-controls="tab-motherboard"><span class="num">4</span><span class="lbl-long">Carte mère &amp; électronique</span><span class="lbl-short">Carte</span></button>
+    <button class="nav-tab" role="tab" data-tab="production" id="tabbtn-production" aria-controls="tab-production"><span class="num">5</span><span class="lbl-long">Production &amp; nomenclature</span><span class="lbl-short">BOM</span></button>
+    <button class="nav-tab" role="tab" data-tab="lab" id="tabbtn-lab" aria-controls="tab-lab"><span class="num">6</span><span class="lbl-long">Laboratoire IA</span><span class="lbl-short">Labo</span><span class="dot" aria-hidden="true"></span></button>
+  </nav>
+
+  <main id="workspace-body">
+    <div id="viewport-3d-container">
+      <div class="vp-top"><div class="pill" id="vp-hint"></div></div>
+      <div class="vp-hud" id="vp-hud" hidden></div>
+      <div class="vp-banner" id="vp-banner" hidden></div>
+      <div class="vp-legend" id="vp-legend"></div>
+      <div class="vp-tip" id="vp-tip" hidden></div>
+    </div>
+    <aside id="side-panel">
+      <div class="tab-panel" id="tab-motor" role="tabpanel" aria-labelledby="tabbtn-motor"></div>
+      <div class="tab-panel" id="tab-simulation" role="tabpanel" aria-labelledby="tabbtn-simulation" hidden></div>
+      <div class="tab-panel" id="tab-ai" role="tabpanel" aria-labelledby="tabbtn-ai" hidden></div>
+      <div class="tab-panel" id="tab-motherboard" role="tabpanel" aria-labelledby="tabbtn-motherboard" hidden></div>
+      <div class="tab-panel" id="tab-production" role="tabpanel" aria-labelledby="tabbtn-production" hidden></div>
+      <div class="tab-panel" id="tab-lab" role="tabpanel" aria-labelledby="tabbtn-lab" hidden></div>
+    </aside>
+  </main>
+</div>
+<div id="modal-root"></div>
+<div id="toast" role="status" hidden></div>
+
+<!-- Moteur 3D Three.js r128 & OrbitControls -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<!-- Noyau de calcul (physique, simulation, PPO) puis interface -->
+<script src="js/core.js"></script>
+<script src="js/lab.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 432 432" width="432" height="432">
+<line x1="216" y1="216" x2="289.15999999999997" y2="289.15999999999997" stroke="#ff8a3d" stroke-width="15.3" stroke-linecap="round"/>
+<line x1="216" y1="216" x2="142.84" y2="289.15999999999997" stroke="#ff8a3d" stroke-width="15.3" stroke-linecap="round"/>
+<line x1="216" y1="216" x2="289.15999999999997" y2="142.84" stroke="#ff8a3d" stroke-width="15.3" stroke-linecap="round"/>
+<line x1="216" y1="216" x2="142.84" y2="142.84" stroke="#ff8a3d" stroke-width="15.3" stroke-linecap="round"/>
+<circle cx="289.15999999999997" cy="289.15999999999997" r="38.9" fill="none" stroke="#5cc8ff" stroke-width="7.1"/>
+<circle cx="289.15999999999997" cy="289.15999999999997" r="13.0" fill="#ff8a3d"/>
+<circle cx="142.84" cy="289.15999999999997" r="38.9" fill="none" stroke="#5cc8ff" stroke-width="7.1"/>
+<circle cx="142.84" cy="289.15999999999997" r="13.0" fill="#ff8a3d"/>
+<circle cx="289.15999999999997" cy="142.84" r="38.9" fill="none" stroke="#5cc8ff" stroke-width="7.1"/>
+<circle cx="289.15999999999997" cy="142.84" r="13.0" fill="#ff8a3d"/>
+<circle cx="142.84" cy="142.84" r="38.9" fill="none" stroke="#5cc8ff" stroke-width="7.1"/>
+<circle cx="142.84" cy="142.84" r="13.0" fill="#ff8a3d"/>
+<rect x="187.7" y="180.6" width="56.6" height="70.8" rx="14.2" fill="#ff8a3d"/>
+<rect x="203.0" y="192.4" width="26.0" height="9.4" rx="4.7" fill="#1c0e04"/>
+</svg>

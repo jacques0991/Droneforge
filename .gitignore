@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# OS and temporary files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+~$*
+.vscode/
+.idea/
+
+# Android build outputs & local properties
+.gradle/
+local.properties
+**/build/

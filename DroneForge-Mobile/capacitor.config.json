@@ -1,0 +1,25 @@
+{
+  "appId": "com.hkstudioci.droneforge",
+  "appName": "DroneForge",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#0a0f18",
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "launchShowDuration": 3000,
+      "backgroundColor": "#0a0f18",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    },
+    "SystemBars": {
+      "insetsHandling": "css",
+      "style": "DARK",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

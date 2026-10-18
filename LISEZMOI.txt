@@ -1,0 +1,17 @@
+DroneForge v2.0 - jumeau numérique de drone
+
+Deux façons de l'ouvrir (double-clic, aucun serveur nécessaire) :
+  - index.html               : version en plusieurs fichiers (css/style.css, js/core.js, js/lab.js, js/app.js), à modifier
+  - droneforge-autonome.html : la même application en un seul fichier, à partager ou envoyer
+
+Fichiers :
+  css/style.css  - thème et mise en page
+  js/core.js     - calculs : modèle moteur/hélice, nomenclature, simulation de vol 6-DoF, pilote automatique, entraînement PPO
+  js/lab.js      - laboratoire IA : réseaux configurables, 5 algorithmes (PPO, A2C, REINFORCE, ES, CEM),
+                   3 tâches, banc d'essai de fiabilité et exports (JSON, C, Python, JavaScript)
+  js/app.js      - interface, rendu 3D (Three.js) et les 6 modules
+
+Une connexion Internet est nécessaire au premier chargement (bibliothèque 3D Three.js et polices).
+Sans elle, la vue 3D est remplacée par un message, mais les calculs, la simulation et l'entraînement restent utilisables.
+Le projet, les poids de l'IA et les modèles du laboratoire sont sauvegardés automatiquement dans le navigateur.
+Exportez les modèles importants (onglet 6, Export) : vider les données du navigateur les efface.

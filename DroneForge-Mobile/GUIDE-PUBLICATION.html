@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DroneForge — Guide de publication Play Store</title>
+<style>
+/* Mise en page : colonne de lecture unique, étapes numérotées dans l'ordre réel de publication */
+:root{--bg:#f7f8fa;--paper:#fff;--fg:#17202c;--muted:#5a6b83;--line:#e1e6ee;--accent:#d9661c;--warn-bg:#fff6e5;--warn:#9a5b00;--ok:#167a4e;--code:#eef1f6}
+@media (prefers-color-scheme:dark){:root{--bg:#0a0f18;--paper:#101826;--fg:#dfe7f1;--muted:#8597ae;--line:#1f2c41;--accent:#ff8a3d;--warn-bg:#2a2210;--warn:#ffc24b;--ok:#3ddc97;--code:#16202f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:780px;margin:0 auto;padding:40px 20px 80px}
+h1{font-size:30px;line-height:1.15;margin:0 0 8px;text-wrap:balance}
+.lead{color:var(--muted);margin:0 0 28px;max-width:64ch}
+h2{font-size:20px;margin:40px 0 12px;display:flex;gap:12px;align-items:baseline}
+h2 .n{font:700 13px ui-monospace,Consolas,monospace;color:#fff;background:var(--accent);border-radius:6px;padding:2px 8px;flex:none}
+h3{font-size:16px;margin:22px 0 6px}
+section{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:6px 22px 18px;margin:0 0 14px}
+ol,ul{padding-left:22px} li{margin:5px 0}
+code,kbd{font:14px ui-monospace,Consolas,monospace;background:var(--code);border-radius:5px;padding:1px 6px}
+pre{background:var(--code);border-radius:8px;padding:12px 14px;overflow-x:auto;font:13.5px/1.5 ui-monospace,Consolas,monospace}
+.warn{background:var(--warn-bg);border-left:4px solid var(--warn);border-radius:6px;padding:10px 14px;margin:14px 0}
+.ok{color:var(--ok);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:14.5px;margin:10px 0}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+.tw{overflow-x:auto}
+.files li code{font-size:13px}
+</style>
+</head>
+<body><main>
+<h1>Publier DroneForge sur le Play Store</h1>
+<p class="lead">Les étapes, dans l'ordre, de ton ordinateur jusqu'à la fiche publiée. Compte environ 1 heure de travail, puis 14 jours de test fermé imposés par Google aux nouveaux comptes personnels, puis quelques jours de vérification par Google.</p>
+
+<section>
+<h2><span class="n">0</span>Ce que contient le dossier DroneForge-Mobile</h2>
+<ul class="files">
+<li><code>android/</code> : le projet Android complet, prêt à ouvrir dans Android Studio. Identifiant <code>com.hkstudioci.droneforge</code>, version 1.0.0 (code 1), Android 7.0 minimum, cible Android 16 (API 36) comme l'exige Google.</li>
+<li><code>store/</code> : tout ce qu'il faut pour la fiche : icône 512 × 512, image de présentation 1024 × 500, 6 captures 1080 × 1920, textes en français et en anglais, politique de confidentialité.</li>
+<li><code>www/</code> : l'application elle-même (HTML, CSS, JavaScript, polices, Three.js), déjà copiée dans le projet Android. Elle fonctionne entièrement hors ligne.</li>
+<li><code>src/</code>, <code>tools/</code>, <code>assets/</code>, <code>package.json</code> : les sources, pour modifier l'application plus tard (demande Node.js).</li>
+<li><code>node_modules/@capacitor/</code> : les modules Android nécessaires à la compilation. Ne les supprime pas.</li>
+</ul>
+<div class="warn"><strong>Limite à connaître :</strong> je n'ai pas pu compiler l'application de mon côté, car les serveurs de Google nécessaires à la compilation sont inaccessibles depuis mon environnement. L'interface a été testée dans un navigateur en taille téléphone, tablette et paysage. La première compilation et le premier essai sur un vrai téléphone se feront chez toi (étapes 3 et 4). Si une erreur apparaît, envoie-moi une capture et je la corrige.</div>
+</section>
+
+<section>
+<h2><span class="n">1</span>Créer le compte Google Play Console</h2>
+<ol>
+<li>Va sur <code>play.google.com/console</code> et connecte-toi avec le compte Google qui sera propriétaire de l'application.</li>
+<li>Choisis le type de compte :
+  <ul>
+  <li><strong>Personnel</strong> : rapide. Mais Google impose ensuite un <strong>test fermé avec au moins 12 testeurs pendant 14 jours d'affilée</strong> avant toute publication publique (étape 8).</li>
+  <li><strong>Organisation</strong> (HK Studio) : demande un numéro D-U-N-S de l'entreprise (gratuit, plusieurs jours d'obtention) et des documents. L'application est publiée au nom de HK Studio.</li>
+  </ul></li>
+<li>Paie les frais d'inscription uniques de 25 $ et termine la vérification d'identité (pièce d'identité, puis validation d'un téléphone Android avec l'application Play Console).</li>
+</ol>
+</section>
+
+<section>
+<h2><span class="n">2</span>Installer Android Studio</h2>
+<ol>
+<li>Télécharge Android Studio sur <code>developer.android.com/studio</code> et installe-le avec les options par défaut.</li>
+<li>Au premier lancement, laisse l'assistant installer le SDK Android. Il faut au moins 10 Go d'espace disque et une bonne connexion.</li>
+<li>Dans <em>SDK Manager</em>, vérifie que <strong>Android 16 (API 36)</strong> est installé.</li>
+</ol>
+</section>
+
+<section>
+<h2><span class="n">3</span>Ouvrir et compiler le projet</h2>
+<ol>
+<li>Android Studio &gt; <em>Open</em> &gt; sélectionne le dossier <code>DroneForge-Mobile\android</code> (le sous-dossier <code>android</code>, pas le dossier parent).</li>
+<li>Attends la fin de la synchronisation Gradle (barre en bas à droite). La première fois, Gradle télécharge ses dépendances : comptez 5 à 15 minutes.</li>
+<li>Menu <em>Build</em> &gt; <em>Make Project</em>. Le message <span class="ok">BUILD SUCCESSFUL</span> doit apparaître en bas.</li>
+</ol>
+</section>
+
+<section>
+<h2><span class="n">4</span>Essayer sur ton téléphone</h2>
+<ol>
+<li>Sur le téléphone : <em>Paramètres &gt; À propos &gt; Numéro de build</em>, touche 7 fois pour activer les options développeur, puis active <em>Débogage USB</em>.</li>
+<li>Branche le téléphone en USB et accepte l'autorisation affichée.</li>
+<li>Dans Android Studio, choisis ton téléphone en haut et clique sur le triangle vert <em>Run</em>.</li>
+<li>Vérifie : écran de démarrage, présentation au premier lancement, les 6 onglets, les manches en mode Manuel, l'export (menu ⋮ &gt; Exporter le projet &gt; Télécharger ouvre le partage Android), le bouton retour (il ferme les fenêtres puis revient à l'onglet précédent).</li>
+</ol>
+</section>
+
+<section>
+<h2><span class="n">5</span>Créer la clé de signature</h2>
+<div class="warn"><strong>Fichier à conserver précieusement.</strong> Garde le fichier <code>.jks</code> et ses mots de passe dans au moins deux endroits sûrs, par exemple une clé USB et un gestionnaire de mots de passe. Grâce à la signature Play App Signing (activée par défaut), Google peut réinitialiser cette clé d'importation en cas de perte, mais la démarche prend plusieurs jours.</div>
+<ol>
+<li><em>Build</em> &gt; <em>Generate Signed App Bundle or APK</em> &gt; <strong>Android App Bundle</strong> &gt; <em>Next</em>.</li>
+<li><em>Create new…</em> : enregistre le fichier sous <code>DroneForge-Mobile\droneforge-upload.jks</code>, alias <code>droneforge</code>, mots de passe solides, validité 25 ans, et renseigne au moins le nom et le pays (CI).</li>
+</ol>
+</section>
+
+<section>
+<h2><span class="n">6</span>Produire le fichier à publier (.aab)</h2>
+<ol>
+<li>Dans le même assistant, choisis la variante <strong>release</strong> puis <em>Create</em>.</li>
+<li>Le fichier est créé dans <code>android\app\release\app-release.aab</code>. C'est lui que tu envoies sur la Play Console.</li>
+</ol>
+<p>Option avancée : copie <code>android\keystore.properties.exemple</code> en <code>keystore.properties</code>, remplis-le, puis lance <code>gradlew bundleRelease</code>. La signature se fera alors automatiquement à chaque compilation.</p>
+</section>
+
+<section>
+<h2><span class="n">7</span>Créer la fiche dans la Play Console</h2>
+<h3>7.1 Créer l'application</h3>
+<p><em>Créer une application</em> : nom <strong>DroneForge : simulateur drone</strong>, langue par défaut <strong>français (France)</strong>, type <strong>Application</strong>, <strong>Gratuite</strong>. Coche les déclarations.</p>
+
+<h3>7.2 Fiche Play Store principale</h3>
+<p>Copie les textes de <code>store\fiche-play-store.txt</code>, ajoute la traduction anglaise (en-US), puis importe les visuels :</p>
+<div class="tw"><table>
+<tr><th>Champ</th><th>Fichier</th></tr>
+<tr><td>Icône de l'application</td><td><code>store\icone-512.png</code></td></tr>
+<tr><td>Image de présentation</td><td><code>store\image-presentation-1024x500.png</code></td></tr>
+<tr><td>Captures d'écran (téléphone)</td><td><code>store\capture-1.png</code> à <code>capture-6.png</code></td></tr>
+<tr><td>Catégorie</td><td>Éducation</td></tr>
+<tr><td>Adresse e-mail de contact</td><td>Une adresse que tu consultes : elle sera visible publiquement</td></tr>
+</table></div>
+
+<h3>7.3 Politique de confidentialité (obligatoire)</h3>
+<ol>
+<li>Ouvre <code>store\politique-confidentialite.html</code> et remplace <code>[ADRESSE E-MAIL DE CONTACT À COMPLÉTER]</code> par ton adresse de contact.</li>
+<li>Publie la page sur ton site, par exemple <code>hkstudio-ci.com/droneforge/confidentialite</code>.</li>
+<li>Colle cette adresse dans <em>Contenu de l'application &gt; Règles de confidentialité</em>.</li>
+</ol>
+
+<h3>7.4 Contenu de l'application : réponses à donner</h3>
+<div class="tw"><table>
+<tr><th>Rubrique</th><th>Réponse</th></tr>
+<tr><td>Accès à l'application</td><td>Toutes les fonctionnalités sont disponibles sans restriction d'accès</td></tr>
+<tr><td>Annonces</td><td>Non, l'application ne contient pas d'annonces</td></tr>
+<tr><td>Classification du contenu</td><td>Catégorie « Référence, actualités ou éducation » ; répondre <strong>Non</strong> à toutes les questions (violence, sexualité, langage, substances, jeux d'argent, interaction entre utilisateurs, partage de position, achats)</td></tr>
+<tr><td>Public cible</td><td>13-15, 16-17 et 18 ans et plus. Ne pas cocher les moins de 13 ans. « Attire-t-elle les enfants ? » : Non</td></tr>
+<tr><td>Sécurité des données</td><td>Collecte ou partage de données : <strong>Non</strong>. Le chiffrement en transit ne s'applique pas (aucune donnée transmise)</td></tr>
+<tr><td>Application gouvernementale</td><td>Non</td></tr>
+<tr><td>Fonctionnalités financières</td><td>Aucune</td></tr>
+<tr><td>Santé</td><td>Aucune</td></tr>
+<tr><td>Application d'actualités</td><td>Non</td></tr>
+</table></div>
+</section>
+
+<section>
+<h2><span class="n">8</span>Test fermé : 12 testeurs, 14 jours</h2>
+<p>Obligatoire pour un compte personnel créé récemment. À ne pas négliger : Google peut refuser l'accès à la production si le test n'a pas été réel.</p>
+<ol>
+<li><em>Tester &gt; Test fermé &gt; Créer un canal</em>, puis <em>Créer une version</em> et importe <code>app-release.aab</code>. Notes de version : « Première version de DroneForge. »</li>
+<li>Ajoute au moins <strong>12 testeurs</strong> (adresses Gmail), idéalement 15 à 20 pour garder de la marge : équipe HK Studio, stagiaires, amis.</li>
+<li>Envoie-leur le lien d'inscription. Chacun doit accepter le test, installer l'application depuis le Play Store et la <strong>garder installée 14 jours d'affilée</strong>. Un désinscrit qui revient repart de zéro.</li>
+<li>Demande-leur de l'ouvrir plusieurs fois et de te signaler les problèmes : Google demande ensuite ce que le test t'a appris.</li>
+<li>Au 15e jour : <em>Tableau de bord &gt; Demander l'accès à la production</em>, et réponds au questionnaire honnêtement.</li>
+</ol>
+</section>
+
+<section>
+<h2><span class="n">9</span>Publier en production</h2>
+<ol>
+<li><em>Production &gt; Créer une version</em> : réutilise le même <code>.aab</code> et choisis les pays (tous, ou commencer par l'Afrique de l'Ouest et la France).</li>
+<li><em>Envoyer pour examen</em>. L'examen prend généralement de quelques heures à 7 jours.</li>
+</ol>
+</section>
+
+<section>
+<h2><span class="n">10</span>Publier une mise à jour</h2>
+<ol>
+<li>Dans <code>android\app\build.gradle</code>, augmente <code>versionCode</code> de 1 (2, 3, …) et change <code>versionName</code> (1.0.1, …). Mets aussi à jour <code>APP_VERSION</code> dans <code>src\app.js</code>.</li>
+<li>Si l'interface a changé : <code>npm install</code> (une fois), puis <code>npm run sync</code> pour recopier l'application dans le projet Android (demande Node.js).</li>
+<li>Regénère le <code>.aab</code> signé avec <strong>la même clé</strong>, puis crée une nouvelle version dans la Play Console.</li>
+</ol>
+</section>
+
+<section>
+<h2><span class="n">✓</span>Liste de contrôle avant envoi</h2>
+<ul>
+<li>L'application démarre, sans écran blanc, sur au moins un vrai téléphone.</li>
+<li>Les 6 onglets s'affichent, la vue 3D tourne au doigt, les manches font voler le drone.</li>
+<li>L'export ouvre le menu de partage Android ; le bouton retour se comporte normalement.</li>
+<li>La politique de confidentialité est en ligne, avec ton adresse e-mail.</li>
+<li>La fiche contient l'icône, l'image de présentation, au moins 2 captures et les textes FR et EN.</li>
+<li>Toutes les rubriques de « Contenu de l'application » sont au vert.</li>
+<li>Le fichier <code>.jks</code> et ses mots de passe sont sauvegardés à deux endroits.</li>
+</ul>
+</section>
+</main></body>
+</html>

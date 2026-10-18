@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DroneForge</string>
+    <string name="title_activity_main">DroneForge</string>
+    <string name="package_name">com.hkstudioci.droneforge</string>
+    <string name="custom_url_scheme">com.hkstudioci.droneforge</string>
+</resources>
